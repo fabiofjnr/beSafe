@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const CadastroScreen = () => {
   return (
@@ -9,7 +9,7 @@ const CadastroScreen = () => {
       <Image style={styles.img} source={require('../../assets/logo.png')} />
 
       <View style={styles.inputcontainer}>
-        <Icon name="user" size={25} color="black" style={styles.icon} />
+        <Icon name="account" size={25} color="black" style={styles.icon} />
         <TextInput
           placeholder="Nome"
           placeholderTextColor="black"
@@ -20,7 +20,7 @@ const CadastroScreen = () => {
       </View>
 
       <View style={styles.inputcontainer}>
-        <Icon name="at" size={25} color="black" style={styles.icon} />
+        <Icon name="email" size={25} color="black" style={styles.icon} />
         <TextInput
           placeholder="Email"
           placeholderTextColor="black"
@@ -32,7 +32,7 @@ const CadastroScreen = () => {
       </View>
 
       <View style={styles.inputcontainer}>
-        <Icon name="key" size={25} color="black" style={styles.icon} />
+        <Icon name="shield-lock-outline" size={25} color="black" style={styles.icon} />
         <TextInput
           placeholder="Senha"
           placeholderTextColor="black"
