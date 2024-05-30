@@ -1,6 +1,6 @@
 <h1 align="center">💚  beSafe - Esteja Seguro  💙</h1>
 
-<h3 align="center">Esse aplicativo foi criado com objetivo de ajudar pessoas que precisam desabafar ou não se sentem ouvidas nem incluídas em certas situações.</h3>
+<h3 align="center">Esse aplicativo foi criado com o objetivo de ajudar pessoas que precisam desabafar ou não se sentem ouvidas nem incluídas em certas situações.</h3>
 <br>
 
 <p align="center">
