@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function Login() {
     const navegacao = useNavigation();
@@ -12,7 +12,7 @@ export default function Login() {
 
 
             <View style={styles.inputcontainer}>
-                <Icon name="at" size={30} color="black" style={styles.icon} />
+                <Icon name="email" size={30} color="black" style={styles.icon} />
                 <TextInput
                     placeholder="Email"
                     placeholderTextColor="black"
@@ -24,7 +24,7 @@ export default function Login() {
             </View>
 
             <View style={styles.inputcontainer}>
-                <Icon name="key" size={30} color="black" style={styles.icon} />
+                <Icon name="shield-lock-outline" size={30} color="black" style={styles.icon} />
                 <TextInput
                     placeholder="Senha"
                     placeholderTextColor="black"
