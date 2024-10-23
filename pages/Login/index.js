@@ -1,172 +1,284 @@
-import { useNavigation } from "@react-navigation/native";
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import { auth } from '../../firebase'; 
+import { signInWithEmailAndPassword } from 'firebase/auth'; 
+import AlertaLogin from '../Alertas/AlertaLogin'; 
 
-export default function Login() {
-    const navegacao = useNavigation();
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); 
+  const navigation = useNavigation();
 
-    return (
-        <View style={styles.container}>
-            <Image style={styles.img} source={require('../../assets/logo.png')} />
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
 
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
 
-            <View style={styles.inputcontainer}>
-                <Icon name="email" size={30} color="black" style={styles.icon} />
-                <TextInput
-                    placeholder="Email"
-                    placeholderTextColor="black"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    style={styles.input}
-                />
-            </View>
+  const showAlert = (title, message) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
-            <View style={styles.inputcontainer}>
-                <Icon name="shield-lock-outline" size={30} color="black" style={styles.icon} />
-                <TextInput
-                    placeholder="Senha"
-                    placeholderTextColor="black"
-                    autoCapitalize="none"
-                    secureTextEntry
-                    style={styles.input}
-                />
-            </View>
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
-            <TouchableOpacity style={styles.esqueceuasenha} onPress={() => navegacao.navigate('esqueceuasenha')}>
-                <Text style={styles.esqueceuasenhatxt}>Esqueceu a senha?</Text>
+  const handleLogin = () => {
+    if (!email || !password) {
+      showAlert("beSafe | Erro", "É necessário preencher ambos os campos para fazer login!");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
+      return;
+    }
+
+    if (password.length < 6) {
+      showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
+      return;
+    }
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then(userCredential => {
+        const user = userCredential.user;
+        console.log('Usuário logado com:', user.email);
+      })
+      .catch(error => {
+        if (error.code === 'auth/wrong-password') {
+          showAlert("beSafe | Erro", "Senha incorreta! Tente novamente.");
+        } else if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+          showAlert("beSafe | Erro", "Verifique o e-mail e tente novamente!");
+        } else {
+          showAlert("beSafe | Erro", "Ocorreu um erro ao fazer login! Verifique o e-mail e a senha e tente novamente.");
+        }
+      });
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContainer}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={isKeyboardVisible} 
+      >
+        <View style={styles.innerContainer}>
+          <Image style={styles.img} source={require('../../assets/logo.png')} />
+
+          <View style={styles.inputcontainer}>
+            <Icon name="email" size={30} color="black" style={styles.icon} />
+            <TextInput
+              placeholder="E-mail"
+              placeholderTextColor="black"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+
+          <View style={styles.inputcontainer}>
+            <Icon name="shield-lock-outline" size={30} color="black" style={styles.icon} />
+            <TextInput
+              placeholder="Senha"
+              placeholderTextColor="black"
+              autoCapitalize="none"
+              secureTextEntry={!showPassword} 
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Icon name={showPassword ? "eye" : "eye-off"} size={25} color="black" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.esqueceuasenha} onPress={() => navigation.navigate('RecSenha')}>
+            <Text style={styles.esqueceuasenhatxt}>Esqueceu a senha?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>ENTRAR</Text>
+          </TouchableOpacity>
+
+          {/* <View style={styles.login2}>
+            <TouchableOpacity style={styles.loginapps} onPress={() => navigation.navigate('google')}>
+              <Image style={styles.imglogin} source={require('../../assets/google.png')} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>ENTRAR</Text>
+            <TouchableOpacity style={styles.loginapps} onPress={() => navigation.navigate('twitter')}>
+              <Image style={styles.imglogin} source={require('../../assets/twitter.png')} />
             </TouchableOpacity>
+          </View> */}
 
-
-            <View style={styles.login2}>
-                <TouchableOpacity style={styles.loginapps} onPress={() => navegacao.navigate('google')}>
-                    <Image style={styles.imglogin} source={require('../../assets/google.png')} />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.loginapps} onPress={() => navegacao.navigate('twitter')}>
-                    <Image style={styles.imglogin} source={require('../../assets/twitter.png')} />
-                </TouchableOpacity>
-            </View>
-
-
-            <TouchableOpacity style={styles.cadastrese} onPress={() => navegacao.navigate('Cadastro')}>
-                <Text style={styles.cadastresetxt}>Não tem uma conta? Cadastre-se</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.cadastrese} onPress={() => navigation.navigate('Cadastro')}>
+            <Text style={styles.cadastresetxt}>Não tem uma conta? Cadastre-se</Text>
+          </TouchableOpacity>
         </View>
-    );
+      </ScrollView>
+
+      <AlertaLogin 
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+      />
+    </KeyboardAvoidingView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'white',
-    },
+  container: {
+    flex: 1,
+    fontFamily: 'BreeSerif',
+  },
 
-    input: {
-        height: 40,
-        width: 250,
-        paddingHorizontal: 10,
-        borderRadius: 15,
-        backgroundColor: '#d5dbe3',
-        color: 'black',
-    },
+  scrollViewContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white', 
+  },
 
-    button: {
-        backgroundColor: '#ADD9F6',
-        width: 250,
-        padding: 13,
-        marginBottom: 10,
-        borderRadius: 15,
-    },
+  innerContainer: {
+    width: '100%', 
+    paddingHorizontal: 20, 
+    alignItems: 'center',
+  },
 
-    buttonText: {
-        color: 'white',
-        textAlign: 'center',
-        fontWeight: 'bold',
-    },
+  input: {
+    height: 40,
+    width: '100%', 
+    maxWidth: 249, 
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    backgroundColor: '#d5dbe3',
+    color: 'black',
+    fontFamily: 'BreeSerif',
+  },
 
-    esqueceuasenha: {
-        backgroundColor: '#fff',
-        width: 250,
-        padding: 10,
-        marginBottom: 70,
-        marginTop: -5,
-    },
+  button: {
+    backgroundColor: '#3a9ee4',
+    width: '100%',
+    maxWidth: 250, 
+    padding: 13,
+    marginBottom: 10,
+    borderRadius: 15,
+  },
 
-    esqueceuasenhatxt: {
-        color: '#EBADFA',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: 15,
-        textDecorationLine: 'underline',
-    },
+  buttonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'BreeSerif',
+  },
 
-    cadastrese: {
-        backgroundColor: '#fff',
-        width: 250,
-        padding: 10,
-        marginBottom: 10,
-    },
+  esqueceuasenha: {
+    backgroundColor: 'transparent', 
+    width: '100%',
+    maxWidth: 250, 
+    padding: 10,
+    marginBottom: 70,
+    marginTop: -5,
+  },
 
+  esqueceuasenhatxt: {
+    color: '#3a9ee4',
+    textAlign: 'center',
+    fontSize: 16,
+    textDecorationLine: 'underline',
+    fontFamily: 'BreeSerif',
+  },
 
-    cadastresetxt: {
-        color: '#EBADFA',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
+  cadastrese: {
+    backgroundColor: 'transparent', 
+    width: '100%', 
+    maxWidth: 250, 
+    padding: 10,
+    marginBottom: 10,
+  },
 
-    buttonContainer: {
-        flex: 1,
-        width: '70%',
-    },
+  cadastresetxt: {
+    color: '#3a9ee4',
+    textAlign: 'center',
+    fontSize: 15,
+    fontFamily: 'BreeSerif',
+  },
 
-    img: {
-        width: 390,
-        height: 300,
-        borderColor: 'black',
-        marginTop: 28,
-        marginBottom: 28,
-    },
+  buttonContainer: {
+    flex: 1,
+    width: '70%',
+  },
 
-    imglogin: {
-        width: 40,
-        height: 40,
-    },
+  img: {
+    width: '100%', 
+    height: 300,
+    borderColor: 'black',
+    marginTop: 28,
+    marginBottom: 28,
+  },
 
-    login2: {
-        marginTop: 10,
-        marginBottom: 10,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+  imglogin: {
+    width: 40,
+    height: 40,
+  },
 
-    loginapps: {
-        marginHorizontal: 10,
-    },
+  login2: {
+    marginTop: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    inputcontainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-        paddingHorizontal: 10,
-        borderRadius: 15,
-        backgroundColor: '#d5dbe3',
-        height: 50,
-      },
-    
-      icon: {
-        marginRight: 10,
-        width: 30,
-      },
+  loginapps: {
+    marginHorizontal: 10,
+  },
 
+  inputcontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    backgroundColor: '#d5dbe3',
+    height: 50,
+    width: 300,
+  },
+  
+  icon: {
+    marginRight: 10,
+    width: 30,
+  },
+
+  eyeIcon: {
+    position: 'absolute',
+    right: 10,
+    height: '100%',
+    justifyContent: 'center',
+  },
 });
 
+export default Login;
