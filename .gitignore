@@ -17,3 +17,4 @@ yarn-error.*
 .env*.local
 .env
 *.tsbuildinfo
+echo ".env"
