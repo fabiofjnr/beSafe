@@ -105,6 +105,7 @@ const NovaEnquete = () => {
         <TextInput
           style={[styles.input, {backgroundColor: isDarkMode ? '#1A1F36' : 'white', color: isDarkMode ? 'white' : 'black'}]}
           placeholder="Escreva sua pergunta aqui"
+          placeholderTextColor={isDarkMode ? 'white' : 'black'}
           multiline
           value={content}
           onChangeText={setContent}
@@ -113,12 +114,14 @@ const NovaEnquete = () => {
       <TextInput
         style={[styles.inputOption, {backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]}
         placeholder="Opção 1"
+         placeholderTextColor="black"
         value={option1}
         onChangeText={setOption1}
       />
       <TextInput
         style={[styles.inputOption, {backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]}
         placeholder="Opção 2"
+         placeholderTextColor="black"
         value={option2}
         onChangeText={setOption2}
       />

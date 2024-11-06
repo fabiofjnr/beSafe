@@ -5,8 +5,9 @@ import { auth, db } from '../../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import AlertaLogin from '../Alertas/AlertaLogin';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Cadastro = () => {
+const Cadastro = ({ setIsRegistering }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,6 +17,7 @@ const Cadastro = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false); 
+  const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -42,45 +44,47 @@ const Cadastro = () => {
     return emailRegex.test(email);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!email || !password || !confirmPassword || !name) {
       showAlert("beSafe | Erro", "Todos os campos devem ser preenchidos!");
       return;
     }
-
+  
     if (!isValidEmail(email)) {
       showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
       return;
     }
-
+  
     if (password.length < 6) {
       showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
       return;
     }
-
+  
     if (password !== confirmPassword) {
       showAlert("beSafe | Erro", "As senhas não conferem!");
       return;
     }
-
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        const user = userCredential.user;
-        await setDoc(doc(db, 'users', user.uid), {
-          name: name, 
-          email: user.email,
-        });
-        console.log('Usuário Cadastrado com:', user.email);
-      })
-      .catch(error => {
-        if (error.code === 'auth/email-already-in-use') {
-          showAlert("beSafe | Erro", "Esse e-mail já está em uso! Tente novamente com outro e-mail.");
-        } else {
-          console.error(error);
-          showAlert("beSafe | Erro", "Ocorreu um erro ao criar a conta. Tente novamente.");
-        }
+  
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+  
+      await setDoc(doc(db, 'users', user.uid), {
+        name: name,
+        email: user.email,
       });
+  
+      setIsRegistering(true); 
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        showAlert("beSafe | Erro", "Esse e-mail já está em uso! Tente novamente com outro e-mail.");
+      } else {
+        console.error(error);
+        showAlert("beSafe | Erro", "Ocorreu um erro ao criar a conta. Tente novamente.");
+      }
+    }
   };
+  
 
   return (
     <KeyboardAvoidingView

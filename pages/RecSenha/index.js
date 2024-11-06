@@ -27,15 +27,16 @@ const RecSenha = ({ navigation }) => {
         try {
             console.log('E-mail:', email);
 
+            // Enviar diretamente o e-mail de redefinição
             await sendPasswordResetEmail(auth, email);
             showAlert('beSafe | Sucesso', 'E-mail de redefinição de senha enviado!');
         } catch (error) {
             console.error('Erro ao enviar e-mail de redefinição:', error);
 
-            if (error.code === 'auth/invalid-email') {
+            if (error.code === 'auth/user-not-found') {
+                showAlert('beSafe | Erro', 'Nenhum usuário foi encontrado com este e-mail.');
+            } else if (error.code === 'auth/invalid-email') {
                 showAlert('beSafe | Erro', 'Por favor, insira um e-mail válido!');
-            } else if (error.code === 'auth/user-not-found') {
-                showAlert('beSafe | Erro', 'Nenhum usuário foi encontrado com este e-mail!');
             } else {
                 showAlert('beSafe | Erro', 'Erro ao enviar e-mail de redefinição!');
             }

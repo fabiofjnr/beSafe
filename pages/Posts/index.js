@@ -1,34 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  TextInput,
-} from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, TextInput, } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { auth, db } from "../../firebase";
 import axios from "axios";
-import {
-  where,
-  doc,
-  getDoc,
-  collection,
-  query,
-  getDocs,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  addDoc,
-  serverTimestamp,
-  deleteDoc,
-  orderBy,
-} from "firebase/firestore";
-import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { where, doc, getDoc, collection, query, getDocs, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp, deleteDoc, orderBy, } from "firebase/firestore";
+import { FontAwesome, Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import AlertaExcluir from "../Alertas/AlertaExcluir";
 import AlertaLogin from "../Alertas/AlertaLogin";
+import AlertaDenuncia from "../Alertas/AlertaDenuncia";
 import { PERSPECTIVE_API_KEY } from "@env";
 import { useTheme } from "../../ThemeContext";
 
@@ -56,6 +35,11 @@ const Posts = () => {
   const [alertTitle, setAlertTitle] = useState("");
   const navigation = useNavigation();
   const user = auth.currentUser;
+  const [reportAlertVisible, setReportAlertVisible] = useState(false);
+  const [reportSuccessAlertVisible, setReportSuccessAlertVisible] = useState(false);
+  const [reportAlreadyReportedAlertVisible, setReportAlreadyReportedAlertVisible] = useState(false);
+  const [reportedPosts, setReportedPosts] = useState([]);
+  const [selectedPostToReport, setSelectedPostToReport] = useState(null);
 
   const navigateToNewPost = () => {
     navigation.navigate("NovoPost");
@@ -255,6 +239,53 @@ const Posts = () => {
     return userPosts;
   };
 
+  const handleReportPost = async (postId, postOwnerId) => {
+    if (!postOwnerId) {
+      console.error("ID do dono do post não definido");
+      setAlertMessage("Não foi possível denunciar este post.");
+      setAlertVisible(true);
+      return;
+    }
+  
+    if (user.uid !== postOwnerId && !reportedPosts.includes(postId)) {
+      setSelectedPostToReport({ postId, postOwnerId });
+      setReportAlertVisible(true);
+    } else {
+      setReportAlreadyReportedAlertVisible(true);
+    }
+  };
+  
+
+  const confirmReportPost = async () => {
+    if (selectedPostToReport) {
+      try {
+        const { postId, postOwnerId } = selectedPostToReport;
+
+        if (!postOwnerId) {
+          console.error("O ID do dono do post não está definido.");
+          return;
+        }
+
+        setReportedPosts([...reportedPosts, postId]);
+
+        const notificationRef = collection(db, "notifications");
+        await addDoc(notificationRef, {
+          userId: postOwnerId,
+          message: `Uma de suas publicações foi denunciada e está sob análise. Caso seja considerada inadequada, a publicação será excluída!`,
+          timestamp: serverTimestamp(),
+          read: false,
+        });
+
+        setReportSuccessAlertVisible(true);
+      } catch (error) {
+        console.error("Erro ao denunciar o post:", error);
+      } finally {
+        setReportAlertVisible(false);
+        setSelectedPostToReport(null);
+      }
+    }
+  };
+
   const confirmDeletePost = (postId) => {
     setPostToDelete(postId);
     setShowAlert(true);
@@ -300,6 +331,7 @@ const Posts = () => {
       }
     }
   };
+
 
   useFocusEffect(
     useCallback(() => {
@@ -374,14 +406,25 @@ const Posts = () => {
               @{item.user?.username || "username"}
             </Text>
           </View>
-          {(item.userId === user.uid || isAuthorized()) && (
+
+          {(item.userId === user.uid || isAuthorized()) ? (
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => confirmDeletePost(item.id)}
             >
-              <MaterialIcons name="more-vert" size={24} color="black" />
+              <MaterialIcons name="delete" size={24} color="black" />
             </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.reportButton}
+              onPress={() => handleReportPost(item.id, item.userId)}
+            >
+
+              <MaterialIcons name="report" size={24} color="black" />
+            </TouchableOpacity>
+
           )}
+
         </View>
         <Text style={styles.postContent}>{item.content}</Text>
         <Text
@@ -605,6 +648,47 @@ const Posts = () => {
         title={alertTitle}
         onClose={() => setAlertVisible(false)}
       />
+
+      <AlertaDenuncia
+        visible={reportAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text>
+              <MaterialIcons name="report" size={20} color="#3a9ee4" /> • Confirmar Denúncia
+            </Text>
+          </View>
+        }
+        message="Você confirma a denúncia desta publicação?"
+        onClose={() => setReportAlertVisible(false)}
+        onConfirm={confirmReportPost}
+      />
+
+      <AlertaLogin
+        visible={reportSuccessAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text>
+              <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+            </Text>
+          </View>
+        }
+        message="Agradecemos pela colaboração. A denúncia foi registrada e logo será analisada!"
+        onClose={() => setReportSuccessAlertVisible(false)}
+      />
+
+      <AlertaLogin
+        visible={reportAlreadyReportedAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text>
+              <Entypo name="warning" size={20} color="#3a9ee4" /> • Aviso
+            </Text>
+          </View>
+        }
+        message="Você já denunciou esta publicação."
+        onClose={() => setReportAlreadyReportedAlertVisible(false)}
+      />
+
     </View>
   );
 };
@@ -800,6 +884,9 @@ const styles = StyleSheet.create({
     fontFamily: "BreeSerif",
   },
   deleteButton: {
+    marginLeft: 10,
+  },
+  reportButton: {
     marginLeft: 10,
   },
   fab: {

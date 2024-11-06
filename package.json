@@ -2,6 +2,7 @@
   "name": "besafe",
   "version": "1.0.0",
   "main": "expo/AppEntry.js",
+  "proxy": "https://api.imagga.com", 
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -20,7 +21,7 @@
     "@react-navigation/bottom-tabs": "^6.6.0",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.10.1",
-    "axios": "^1.7.2",
+    "axios": "^1.7.7",
     "expo": "~51.0.21",
     "expo-font": "~12.0.9",
     "expo-image-picker": "~15.0.7",
@@ -41,5 +42,8 @@
     "react-native-vector-icons": "^10.1.0",
     "react-native-web": "^0.19.13"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.1"
+  }
 }

@@ -96,31 +96,31 @@ const Perfil = ({ setIsLoggedIn }) => {
   const handleImaggaRequest = async (imageUri) => {
     try {
       console.log('Iniciando análise da imagem:', imageUri);
-
-      const formData = new FormData();
-      formData.append('image', {
-        uri: imageUri,
-        name: 'image.jpg',
-        type: 'image/jpeg',
-      });
-
+  
+      const base64Image = await getBase64Image(imageUri);
+      const formData = new URLSearchParams();
+      formData.append('image_base64', base64Image);
+  
+      const authHeader = `Basic ${window.btoa(`${IMAGGA_API_KEY}:${IMAGGA_API_SECRET}`)}`;
+  
       const response = await fetch('https://api.imagga.com/v2/tags', {
         method: 'POST',
         headers: {
-          'Authorization': `Basic ${btoa(`${IMAGGA_API_KEY}:${IMAGGA_API_SECRET}`)}`,
+          'Authorization': authHeader,
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: formData,
+        body: formData.toString(),
       });
-
+  
       const result = await response.json();
       console.log('Resultado da API:', result);
-
+  
       if (result.status && result.status.type === "error") {
         console.error('Erro da API:', result.status.text);
         alert(result.status.text);
         return;
       }
-
+  
       if (result.result && result.result.tags) {
         const tags = result.result.tags.map(tagObj => tagObj.tag.en.toLowerCase());
         console.log('Tags retornadas pela API:', tags);
@@ -133,13 +133,12 @@ const Perfil = ({ setIsLoggedIn }) => {
       alert('Erro ao analisar a imagem. Tente novamente.');
     }
   };
-
+  
   const isImageInappropriate = (tags) => {
     const inappropriateTags = [
       "brassiere", "lingerie", "erotic", "undergarment", "nude", "topless", "sexual",];
     return tags.some(tag => inappropriateTags.includes(tag));
   };
-
 
   const getBase64Image = async (imageUri) => {
     try {
@@ -247,11 +246,11 @@ const Perfil = ({ setIsLoggedIn }) => {
 
   return (
     <KeyboardAvoidingView
-      style={[{ flex: 1 }, {backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}
+      style={[{ flex: 1 }, { backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingBottom: isKeyboardVisible ? keyboardHeight : 20, backgroundColor: isDarkMode ? '#1A1F36' : 'white'  }]}
+        contentContainerStyle={[styles.container, { paddingBottom: isKeyboardVisible ? keyboardHeight : 20, backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}
         keyboardShouldPersistTaps='handled'
       >
 
@@ -266,10 +265,10 @@ const Perfil = ({ setIsLoggedIn }) => {
               style={styles.profilePicture}
             />
           </TouchableOpacity>
-          <Text onPress={handleImagePicker} style={[styles.changePictureText, {color: isDarkMode ? '#DCDCDC' : '#007bff'}]}>Alterar foto</Text>
+          <Text onPress={handleImagePicker} style={[styles.changePictureText, { color: isDarkMode ? '#DCDCDC' : '#007bff' }]}>Alterar foto</Text>
         </View>
 
-        <View style={[styles.formContainer, {backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6',}]}>
+        <View style={[styles.formContainer, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', }]}>
           <Text style={styles.label}>Nome</Text>
           <View style={styles.inputContainer}>
             <Ionicons name="person-circle-outline" size={24} color="black" style={styles.icon} />
@@ -279,7 +278,7 @@ const Perfil = ({ setIsLoggedIn }) => {
               value={name}
               onChangeText={setName}
               maxLength={100}
-              color={isDarkMode ? 'white' : 'white'}
+              color={isDarkMode ? 'white' : 'black'}
               placeholderTextColor={isDarkMode ? 'white' : 'black'}
             />
           </View>
@@ -400,6 +399,7 @@ const styles = StyleSheet.create({
   bioInput: {
     height: 150,
     textAlignVertical: 'top',
+    paddingTop: 10,
     fontFamily: 'BreeSerif',
   },
   icon: {

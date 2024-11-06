@@ -4,14 +4,14 @@ import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { MaterialIcons } from '@expo/vector-icons';
-import AlertaLogin from '../Alertas/AlertaLogin'; 
+import AlertaLogin from '../Alertas/AlertaLogin';
 import { useTheme } from '../../ThemeContext';
 
 const NovoPost = () => {
   const { isDarkMode } = useTheme();
   const [content, setContent] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
-  const [showAlert, setShowAlert] = useState(false); 
+  const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const navigation = useNavigation();
@@ -55,7 +55,7 @@ const NovoPost = () => {
       await addDoc(collection(db, 'posts'), {
         userId: user.uid,
         username: user.displayName,
-        profilePictureURL: user.photoURL, 
+        profilePictureURL: user.photoURL,
         content: content.trim(),
         timestamp: serverTimestamp(),
         likes: [],
@@ -65,7 +65,7 @@ const NovoPost = () => {
       setAlertTitle('Sucesso');
       setAlertMessage('Publicação postada com sucesso!');
       setShowAlert(true);
-      setContent(''); 
+      setContent('');
     } catch (error) {
       console.error('Erro ao criar post:', error);
       setAlertTitle('Erro');
@@ -77,17 +77,17 @@ const NovoPost = () => {
   const handleCloseAlert = () => {
     setShowAlert(false);
     if (alertTitle === 'Sucesso') {
-      navigation.goBack(); 
+      navigation.goBack();
     }
   };
 
   return (
-    <View style={[styles.container, {backgroundColor: isDarkMode ? '#1A1F36' : 'white'}]}>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-          <MaterialIcons name="arrow-back" size={35} style={[styles.closeButton, {color: isDarkMode ? 'white' : 'black'}]} />
+          <MaterialIcons name="arrow-back" size={35} style={[styles.closeButton, { color: isDarkMode ? 'white' : 'black' }]} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handlePost} style={[styles.publishButton, {backgroundColor: isDarkMode ? '#005a99' : '#3a9ee4'}]}>
+        <TouchableOpacity onPress={handlePost} style={[styles.publishButton, { backgroundColor: isDarkMode ? '#005a99' : '#3a9ee4' }]}>
           <Text style={styles.publishButtonText}>PUBLICAR</Text>
         </TouchableOpacity>
       </View>
@@ -97,10 +97,11 @@ const NovoPost = () => {
           style={styles.profilePicture}
         />
         <TextInput
-          style={[styles.input, {backgroundColor: isDarkMode ? '#1A1F36' : 'white', color: isDarkMode ? 'white' : 'black'}]}
+          style={[styles.input, { backgroundColor: isDarkMode ? '#1A1F36' : 'white', color: isDarkMode ? 'white' : 'black' }]}
           placeholder="Desabafe aqui..."
           multiline
           value={content}
+          placeholderTextColor={isDarkMode ? 'white' : 'black'}
           onChangeText={setContent}
         />
       </View>
@@ -108,7 +109,7 @@ const NovoPost = () => {
         visible={showAlert}
         title={alertTitle}
         message={alertMessage}
-        onClose={handleCloseAlert}  
+        onClose={handleCloseAlert}
       />
     </View>
   );
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
     padding: 10
   },
   publishButton: {
-    backgroundColor: '#3a9ee4', 
+    backgroundColor: '#3a9ee4',
     padding: 15,
     borderRadius: 15,
     width: '35%',
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
   input: {
-    flex: 1, 
+    flex: 1,
     height: 650,
     borderRadius: 10,
     paddingHorizontal: 15,

@@ -16,11 +16,13 @@ import Salvos from './pages/Salvos';
 import Perfil from './pages/Perfil';
 import RecSenha from './pages/RecSenha';
 import IAchat from './pages/IAchat';
+import Denuncias from './pages/Denuncias';
 import { useFonts } from 'expo-font';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { auth } from './firebase';
 import AlertaBV from './pages/Alertas/AlertaBV';
-import { ThemeProvider, useTheme } from './ThemeContext';  
+import { ThemeProvider, useTheme } from './ThemeContext';
+import IntroTutorial from './pages/IntroTutorial';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,7 +40,22 @@ const OtherScreensStack = () => (
 const Tab = createBottomTabNavigator();
 
 const AppTabs = ({ setIsLoggedIn }) => {
-  const { isDarkMode } = useTheme();  
+  const { isDarkMode } = useTheme();
+  const [userEmail, setUserEmail] = useState(null);
+  
+  const allowedEmails = [
+    "fj878207@gmail.com",
+    "anacarolcorr07@gmail.com",
+    "isabella.barranjard@gmail.com",
+    "contaetec14@gmail.com",
+  ];
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setUserEmail(user.email);
+    }
+  }, []);
 
   return (
     <Tab.Navigator
@@ -102,6 +119,18 @@ const AppTabs = ({ setIsLoggedIn }) => {
           headerTitle: 'Salvos',
         }}
       />
+     {allowedEmails.includes(userEmail) && (
+        <Tab.Screen
+          name="Denuncias"
+          component={Denuncias}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="report" color={color} marginTop={5} size={35} />
+            ),
+            headerTitle: 'Denúncias',
+          }}
+        />
+      )}
       <Tab.Screen
         name="Perfil"
         options={{
@@ -117,76 +146,67 @@ const AppTabs = ({ setIsLoggedIn }) => {
   );
 };
 
-const AuthStack = () => (
+const AuthStack = ({ setIsRegistering, setHasLoggedIn }) => (
   <Stack.Navigator>
     <Stack.Screen
       name="Login"
-      component={Login}
       options={{ headerShown: false }}
-    />
+    >
+      {props => <Login {...props} setHasLoggedIn={setHasLoggedIn} />}
+    </Stack.Screen>
     <Stack.Screen
       name="Cadastro"
-      component={Cadastro}
-      options={{
-        title: 'Cadastre-se!',
-        headerStyle: { backgroundColor: 'white' },
-        headerTintColor: 'black',
-        headerTitleAlign: 'center',
-      }}
+      component={props => <Cadastro {...props} setIsRegistering={setIsRegistering} />}
+      options={{ title: 'Cadastre-se!', headerStyle: { backgroundColor: 'white' }, headerTintColor: 'black', headerTitleAlign: 'center' }}
     />
     <Stack.Screen
       name="RecSenha"
       component={RecSenha}
-      options={{ title: 'Esqueceu a senha?' }}
+      options={{ title: 'Esqueceu a senha?', headerStyle: { backgroundColor: 'white' }, headerTintColor: 'black', headerTitleAlign: 'center'  }}
     />
   </Stack.Navigator>
 );
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  const [alertShown, setAlertShown] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    'BreeSerif': require('./assets/BreeSerif-Regular.ttf'),
-  });
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
         setIsLoggedIn(true);
-        if (!alertShown) {
+
+        if (isRegistering) {
+          setShowIntro(true);
+        } else if (hasLoggedIn) {
           setShowAlert(true);
-          setAlertShown(true);
+          setHasLoggedIn(false);
         }
       } else {
         setIsLoggedIn(false);
       }
     });
+
     return unsubscribe;
-  }, [alertShown]);
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setAlertShown(false);
-    }
-  }, [isLoggedIn]);
-
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  }, [isRegistering, hasLoggedIn]);
 
   return (
     <ThemeProvider>
       <View style={{ flex: 1 }}>
         <NavigationContainer>
-          {isLoggedIn ? <AppTabs setIsLoggedIn={setIsLoggedIn} /> : <AuthStack />}
+          {isLoggedIn ? (
+            <AppTabs setIsLoggedIn={setIsLoggedIn} />
+          ) : (
+            <AuthStack setIsRegistering={setIsRegistering} setHasLoggedIn={setHasLoggedIn} />
+          )}
         </NavigationContainer>
-        {showAlert && (
+        {showIntro && (
+          <IntroTutorial onClose={() => setShowIntro(false)} />
+        )}
+        {showAlert && !showIntro && (
           <AlertaBV
             visible={showAlert}
             title="beSafe"

@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { auth } from '../../firebase'; 
-import { signInWithEmailAndPassword } from 'firebase/auth'; 
-import AlertaLogin from '../Alertas/AlertaLogin'; 
+import { auth } from '../../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import AlertaLogin from '../Alertas/AlertaLogin';
 
-const Login = () => {
+const Login = ({ setHasLoggedIn }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); 
+  const [showPassword, setShowPassword] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -46,21 +46,22 @@ const Login = () => {
       showAlert("beSafe | Erro", "É necessário preencher ambos os campos para fazer login!");
       return;
     }
-
+  
     if (!isValidEmail(email)) {
       showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
       return;
     }
-
+  
     if (password.length < 6) {
       showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
       return;
     }
-
+  
     signInWithEmailAndPassword(auth, email, password)
       .then(userCredential => {
         const user = userCredential.user;
         console.log('Usuário logado com:', user.email);
+        setHasLoggedIn(true); 
       })
       .catch(error => {
         if (error.code === 'auth/wrong-password') {
@@ -72,6 +73,7 @@ const Login = () => {
         }
       });
   };
+  
 
   return (
     <KeyboardAvoidingView
@@ -81,7 +83,7 @@ const Login = () => {
       <ScrollView
         contentContainerStyle={styles.scrollViewContainer}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={isKeyboardVisible} 
+        scrollEnabled={isKeyboardVisible}
       >
         <View style={styles.innerContainer}>
           <Image style={styles.img} source={require('../../assets/logo.png')} />
@@ -106,7 +108,7 @@ const Login = () => {
               placeholder="Senha"
               placeholderTextColor="black"
               autoCapitalize="none"
-              secureTextEntry={!showPassword} 
+              secureTextEntry={!showPassword}
               style={styles.input}
               value={password}
               onChangeText={setPassword}
@@ -124,23 +126,13 @@ const Login = () => {
             <Text style={styles.buttonText}>ENTRAR</Text>
           </TouchableOpacity>
 
-          {/* <View style={styles.login2}>
-            <TouchableOpacity style={styles.loginapps} onPress={() => navigation.navigate('google')}>
-              <Image style={styles.imglogin} source={require('../../assets/google.png')} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.loginapps} onPress={() => navigation.navigate('twitter')}>
-              <Image style={styles.imglogin} source={require('../../assets/twitter.png')} />
-            </TouchableOpacity>
-          </View> */}
-
           <TouchableOpacity style={styles.cadastrese} onPress={() => navigation.navigate('Cadastro')}>
             <Text style={styles.cadastresetxt}>Não tem uma conta? Cadastre-se</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <AlertaLogin 
+      <AlertaLogin
         visible={alertVisible}
         title={alertTitle}
         message={alertMessage}
@@ -160,19 +152,19 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white', 
+    backgroundColor: 'white',
   },
 
   innerContainer: {
-    width: '100%', 
-    paddingHorizontal: 20, 
+    width: '100%',
+    paddingHorizontal: 20,
     alignItems: 'center',
   },
 
   input: {
     height: 40,
-    width: '100%', 
-    maxWidth: 249, 
+    width: '100%',
+    maxWidth: 249,
     paddingHorizontal: 10,
     borderRadius: 15,
     backgroundColor: '#d5dbe3',
@@ -183,7 +175,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#3a9ee4',
     width: '100%',
-    maxWidth: 250, 
+    maxWidth: 250,
     padding: 13,
     marginBottom: 10,
     borderRadius: 15,
@@ -196,9 +188,9 @@ const styles = StyleSheet.create({
   },
 
   esqueceuasenha: {
-    backgroundColor: 'transparent', 
+    backgroundColor: 'transparent',
     width: '100%',
-    maxWidth: 250, 
+    maxWidth: 250,
     padding: 10,
     marginBottom: 70,
     marginTop: -5,
@@ -213,9 +205,9 @@ const styles = StyleSheet.create({
   },
 
   cadastrese: {
-    backgroundColor: 'transparent', 
-    width: '100%', 
-    maxWidth: 250, 
+    backgroundColor: 'transparent',
+    width: '100%',
+    maxWidth: 250,
     padding: 10,
     marginBottom: 10,
   },
@@ -233,7 +225,7 @@ const styles = StyleSheet.create({
   },
 
   img: {
-    width: '100%', 
+    width: '100%',
     height: 300,
     borderColor: 'black',
     marginTop: 28,
@@ -267,7 +259,7 @@ const styles = StyleSheet.create({
     height: 50,
     width: 300,
   },
-  
+
   icon: {
     marginRight: 10,
     width: 30,

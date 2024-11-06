@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { CHATGPT_API_KEY } from '@env';
+import axios from 'axios';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useTheme } from '../../ThemeContext';
+import { CHATGPT_API_KEY } from '@env';
 
 const API_KEY = CHATGPT_API_KEY;
 
 export default function ChatScreen() {
   const { isDarkMode } = useTheme();
-  const [name, setName] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
+  const [name, setName] = useState('Usuário');
+  const [chatHistory, setChatHistory] = useState([]);
+  const [userMessage, setUserMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -24,10 +26,14 @@ export default function ChatScreen() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setName(data.name || '');
-            setMessages([
-              { id: '1', text: `Olá, ${data.name || 'Usuário'}! Como posso te ajudar hoje?`, sender: 'bot' }
-            ]);
+            const userName = data.name || 'Usuário';
+            setName(userName);
+            const greetingMessage = {
+              id: '1',
+              text: `Olá, ${userName}! Como posso te ajudar hoje?`,
+              sender: 'bot',
+            };
+            setChatHistory([greetingMessage]);
           }
         } catch (error) {
           console.error('Erro ao buscar dados do usuário:', error);
@@ -39,77 +45,83 @@ export default function ChatScreen() {
   }, []);
 
   const handleSend = async () => {
-    if (text.trim()) {
-      const userMessage = { id: Date.now().toString(), text, sender: 'user' };
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      setText('');
+    if (!userMessage.trim() || isSending) return;
 
-      try {
-        const formattedMessages = [...messages.map((msg) => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.text,
-        })), { role: 'user', content: text }];
+    setIsSending(true);
+    const newMessage = { id: Date.now().toString(), text: userMessage, sender: 'user' };
+    setChatHistory((prev) => [...prev, newMessage]);
+    setUserMessage('');
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
+    try {
+      const context = chatHistory
+        .slice(-20)
+        .map((message) => `${message.sender === 'user' ? 'Usuário' : 'Bot'}: ${message.text}`)
+        .join('\n');
+
+      const response = await axios.post(
+        'https://api.cohere.ai/v1/generate',
+        {
+          prompt: `Você é uma psicóloga online... Contexto: ${context}\nUsuário: "${userMessage}"\nBot:`,
+          model: 'command-xlarge-nightly',
+          max_tokens: 300,
+          temperature: 0.7,
+        },
+        {
           headers: {
+            Authorization: `Bearer ${API_KEY}`,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
           },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: formattedMessages,
-            max_tokens: 150,
-          }),
-        });
-
-        if (response.status === 429) {
-          console.log('Muitas requisições, aguardando antes de tentar novamente.');
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          handleSend();
-          return;
         }
+      );
 
-        const data = await response.json();
-        if (data.choices && data.choices.length > 0) {
-          const botMessage = {
-            id: Date.now().toString(),
-            text: data.choices[0].message.content.trim(),
-            sender: 'bot',
-          };
-          setMessages((prevMessages) => [...prevMessages, botMessage]);
-        } else {
-          console.error('Estrutura de resposta inválida', data);
-        }
-      } catch (error) {
-        console.error('Erro na chamada da API:', error);
-      }
+      const aiMessage = {
+        id: Date.now().toString(),
+        text: response.data.generations[0].text.trim(),
+        sender: 'bot',
+      };
+      setChatHistory((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Erro ao obter resposta da IA:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { id: Date.now().toString(), text: 'Desculpe, estou tendo dificuldades em responder no momento. Tente novamente mais tarde :)', sender: 'bot' },
+      ]);
+    } finally {
+      setIsSending(false);
     }
   };
 
   const renderItem = ({ item }) => (
     <View style={[
       styles.bubble,
-      item.sender === 'user' ? styles.userBubble : styles.botBubble,
-      isDarkMode && (item.sender === 'user' ? styles.darkUserBubble : styles.darkBotBubble),
+      item.sender === 'user'
+        ? (isDarkMode ? styles.darkUserBubble : styles.userBubble)
+        : (isDarkMode ? styles.darkBotBubble : styles.botBubble),
+      { alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start' }
     ]}>
-      <Text style={[styles.text, isDarkMode && styles.darkText]}>{item.text}</Text>
+      <Text style={[
+        styles.text,
+        isDarkMode && (item.sender === 'user' ? styles.darkUserText : styles.darkBotText)
+      ]}>
+        {item.text}
+      </Text>
     </View>
   );
 
   return (
     <View style={[styles.container, isDarkMode && styles.darkContainer]}>
       <FlatList
-        data={messages}
+        data={isSending ? [...chatHistory, { id: 'typing', text: 'Digitando...', sender: 'bot' }] : chatHistory}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.chatContainer}
       />
+
       <View style={[styles.inputContainer, isDarkMode && styles.darkInputContainer]}>
         <TextInput
           style={[styles.input, isDarkMode && styles.darkInput]}
-          value={text}
-          onChangeText={setText}
+          value={userMessage}
+          onChangeText={setUserMessage}
           placeholder="Digite sua mensagem..."
           placeholderTextColor={isDarkMode ? 'white' : '#666'}
         />
@@ -138,7 +150,7 @@ const styles = StyleSheet.create({
     padding: 18,
     marginVertical: 5,
     maxWidth: '80%',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#ccc',
   },
   userBubble: {
@@ -146,7 +158,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   darkUserBubble: {
-    backgroundColor: '#3a9ee4',
+    backgroundColor: '#005a99',
   },
   botBubble: {
     backgroundColor: '#ADD8F6',
@@ -157,10 +169,12 @@ const styles = StyleSheet.create({
   },
   text: {
     color: 'black',
-    fontFamily: 'BreeSerif',
     fontSize: 16,
   },
-  darkText: {
+  darkUserText: {
+    color: 'white',
+  },
+  darkBotText: {
     color: 'black',
   },
   inputContainer: {
@@ -178,7 +192,6 @@ const styles = StyleSheet.create({
     borderColor: '#3a9ee4',
     padding: 10,
     marginRight: 10,
-    fontFamily: 'BreeSerif',
   },
   darkInput: {
     borderColor: '#005a99',
@@ -196,7 +209,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontFamily: 'BreeSerif',
   },
   darkButtonText: {
     color: 'white',

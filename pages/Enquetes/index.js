@@ -2,9 +2,10 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, TextInput, FlatList, StyleSheet } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { auth, db } from '../../firebase';
-import { doc, getDoc, getDocs, updateDoc, arrayUnion, deleteDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, updateDoc, arrayUnion, deleteDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import AlertaExcluir from '../Alertas/AlertaExcluir';
 import AlertaLogin from '../Alertas/AlertaLogin';
+import AlertaDenuncia from "../Alertas/AlertaDenuncia";
 import { Entypo, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { PERSPECTIVE_API_KEY } from '@env';
@@ -17,6 +18,7 @@ const Enquetes = () => {
   const [bio, setBio] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
   const [polls, setPolls] = useState([]);
+  const [reportedPolls, setReportedPolls] = useState([]);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -24,6 +26,11 @@ const Enquetes = () => {
   const [pollToDelete, setPollToDelete] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [alertSuccessVisible, setAlertSuccessVisible] = useState(false);
+  const [reportAlertVisible, setReportAlertVisible] = useState(false);
+  const [reportSuccessAlertVisible, setReportSuccessAlertVisible] = useState(false);
+  const [reportAlreadyReportedAlertVisible, setReportAlreadyReportedAlertVisible] = useState(false);
+  const [pollToReport, setPollToReport] = useState(null);
+
 
   const navigation = useNavigation();
   const currentUser = auth.currentUser;
@@ -225,6 +232,38 @@ const Enquetes = () => {
     setShowAlert(true);
   };
 
+  const handleReportPoll = async (pollId) => {
+    const poll = polls.find((p) => p.id === pollId);
+
+    if (poll.reportedBy?.includes(currentUser.uid)) {
+      setReportAlreadyReportedAlertVisible(true);
+      return;
+    }
+
+    setPollToReport(pollId);
+    setReportAlertVisible(true);
+  };
+
+  const confirmReportPoll = async () => {
+    try {
+      const reportRef = collection(db, 'reports');
+      await addDoc(reportRef, {
+        pollId: pollToReport,
+        reportedBy: currentUser.uid,
+        timestamp: serverTimestamp(),
+        content: polls.find((p) => p.id === pollToReport).content,
+        userId: polls.find((p) => p.id === pollToReport).userId,
+      });
+
+      setReportAlertVisible(false);
+      setReportSuccessAlertVisible(true);
+    } catch (error) {
+      console.error('Erro ao denunciar a enquete:', error);
+    }
+  };
+
+
+
   const renderPoll = ({ item }) => {
     const userVoted = selectedOptions[item.id] !== undefined;
     const userVoteOption = selectedOptions[item.id];
@@ -238,12 +277,17 @@ const Enquetes = () => {
           />
           <View style={styles.pollInfo}>
             <Text style={styles.pollName}>{item.user?.name || 'Usuário'}</Text>
-            <Text style={[styles.pollUsername, {color: isDarkMode ? '#363636' : '#4F4F4F'}]}>@{item.user?.username || 'username'}</Text>
+            <Text style={[styles.pollUsername, { color: isDarkMode ? '#363636' : '#4F4F4F' }]}>@{item.user?.username || 'username'}</Text>
           </View>
-          {(currentUser?.uid === item.userId || adminEmails.includes(currentUser?.email)) && (
+          {(currentUser?.uid === item.userId || adminEmails.includes(currentUser?.email)) ? (
             <TouchableOpacity onPress={() => handleDeletePoll(item.id)} style={styles.deleteIcon}>
-              <Entypo name="dots-three-horizontal" size={24} color="black" />
+              <MaterialIcons name="delete" size={24} color="black" />
             </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => handleReportPoll(item.id)} style={styles.reportIcon}>
+              <MaterialIcons name="report" size={24} color="black" />
+            </TouchableOpacity>
+
           )}
         </View>
         <Text style={styles.pollContent}>{item.content}</Text>
@@ -286,25 +330,25 @@ const Enquetes = () => {
           style={styles.profilePicture}
         />
         <View style={[styles.infoContainer]}>
-          <Text style={[styles.name, {color: isDarkMode ? 'white' : 'black'}]}>{name}</Text>
-          <Text style={[styles.username, {color: isDarkMode ? 'white' : 'black'}]}>@{username}</Text>
-          <Text style={[styles.bio, {color: isDarkMode ? 'white' : 'black'}]}>{bio}</Text>
+          <Text style={[styles.name, { color: isDarkMode ? 'white' : 'black' }]}>{name}</Text>
+          <Text style={[styles.username, { color: isDarkMode ? 'white' : 'black' }]}>@{username}</Text>
+          <Text style={[styles.bio, { color: isDarkMode ? 'white' : 'black' }]}>{bio}</Text>
         </View>
         <TouchableOpacity style={[styles.editButton, { backgroundColor: isDarkMode ? '#005a99' : '#3a9ee4' }]} onPress={() => navigation.navigate('Perfil')}>
           <MaterialIcons name="edit" size={24} color="white" />
         </TouchableOpacity>
       </View>
-      <View style={[styles.buttonContainer, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', borderColor: isDarkMode ? 'white' : 'black', borderTopWidth: isDarkMode ? 2 : 1}]}>
-        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]} onPress={() => navigation.navigate('Posts')}>
+      <View style={[styles.buttonContainer, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', borderColor: isDarkMode ? 'white' : 'black', borderTopWidth: isDarkMode ? 2 : 1 }]}>
+        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]} onPress={() => navigation.navigate('Posts')}>
           <Text style={styles.navButtonText}>Posts</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navButton1, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', borderColor: isDarkMode ? 'white' : 'black'}]} onPress={() => navigation.navigate('Enquetes')}>
+        <TouchableOpacity style={[styles.navButton1, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', borderColor: isDarkMode ? 'white' : 'black' }]} onPress={() => navigation.navigate('Enquetes')}>
           <Text style={styles.navButtonText1}>Enquetes</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]} onPress={() => navigation.navigate('Respostas')}>
+        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]} onPress={() => navigation.navigate('Respostas')}>
           <Text style={styles.navButtonText}>Respostas</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]} onPress={() => navigation.navigate('Curtidas')}>
+        <TouchableOpacity style={[styles.navButton, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]} onPress={() => navigation.navigate('Curtidas')}>
           <Text style={styles.navButtonText}>Curtidas</Text>
         </TouchableOpacity>
       </View>
@@ -314,13 +358,62 @@ const Enquetes = () => {
         renderItem={renderPoll}
         ListEmptyComponent={(
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: isDarkMode ? 'white' : 'black'}]}>Nenhuma enquete foi publicada ainda.</Text>
+            <Text style={[styles.emptyText, { color: isDarkMode ? 'white' : 'black' }]}>Nenhuma enquete foi publicada ainda.</Text>
           </View>
         )}
       />
       <TouchableOpacity style={[styles.fab, { backgroundColor: isDarkMode ? '#005a99' : '#3a9ee4' }]} onPress={navigateToNewPoll}>
         <MaterialIcons name="add" size={24} color="white" />
       </TouchableOpacity>
+
+
+      {reportAlertVisible && (
+        <AlertaDenuncia
+          visible={reportAlertVisible}
+          title={
+            <View style={{ alignItems: "center" }}>
+              <Text>
+                <MaterialIcons name="report" size={20} color="#3a9ee4" /> • Confirmar Denúncia
+              </Text>
+            </View>
+          }
+          message="Você confirma a denúncia desta enquete?"
+          onClose={() => setReportAlertVisible(false)}
+          onConfirm={confirmReportPoll}
+        />
+      )}
+
+      {reportSuccessAlertVisible && (
+        <AlertaLogin
+          visible={reportSuccessAlertVisible}
+          title={
+            <View style={{ alignItems: "center" }}>
+              <Text>
+                <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+              </Text>
+            </View>
+          }
+          message="Agradecemos pela colaboração. A denúncia foi registrada e logo será analisada!"
+          onClose={() => setReportSuccessAlertVisible(false)}
+        />
+      )}
+
+      {reportAlreadyReportedAlertVisible && (
+        <AlertaLogin
+          visible={reportAlreadyReportedAlertVisible}
+          title={
+            <View style={{ alignItems: "center" }}>
+              <Text>
+                <Entypo name="warning" size={20} color="#3a9ee4" /> • Aviso
+              </Text>
+            </View>
+          }
+          message="Você já denunciou esta enquete."
+          onClose={() => setReportAlreadyReportedAlertVisible(false)}
+        />
+      )}
+
+
       {showAlert && (
         <AlertaExcluir
           visible={showAlert}
@@ -517,7 +610,7 @@ const styles = StyleSheet.create({
     marginTop: -18,
   },
   deleteIcon: {
-    marginLeft: 165,
+    marginLeft: 185,
   },
   fab: {
     position: 'absolute',
@@ -546,6 +639,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#000',
     fontFamily: 'BreeSerif',
+  },
+  reportIcon: {
+    marginLeft: 210,
   },
 });
 
