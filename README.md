@@ -24,7 +24,7 @@
 
 ### 🌈 Visual
 
-O beSafe utiliza uma paleta acolhedora e relaxante, com destaque para a cor **#EBADFA**, e a tipografia **BreeSerif**, promovendo uma experiência visual confortável e amigável.
+O beSafe utiliza uma paleta acolhedora e relaxante, com destaque para a cor **#EBADFA**, promovendo uma experiência visual confortável e amigável.
 
 ---
 
