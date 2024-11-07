@@ -60,6 +60,7 @@ const Perfil = ({ setIsLoggedIn }) => {
             setBio(data.bio || '');
             setProfilePicture(data.profilePictureURL || null);
             setOldUsername(data.username || '');
+            
           }
         } catch (error) {
           console.error('Erro ao buscar dados do usuário:', error);

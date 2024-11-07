@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { auth } from '../../firebase';
@@ -15,6 +15,7 @@ const Login = ({ setHasLoggedIn }) => {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -42,38 +43,51 @@ const Login = ({ setHasLoggedIn }) => {
   };
 
   const handleLogin = () => {
-    if (!email || !password) {
-      showAlert("beSafe | Erro", "É necessário preencher ambos os campos para fazer login!");
-      return;
-    }
-  
-    if (!isValidEmail(email)) {
-      showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
-      return;
-    }
-  
-    if (password.length < 6) {
-      showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
-      return;
-    }
-  
-    signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        const user = userCredential.user;
-        console.log('Usuário logado com:', user.email);
-        setHasLoggedIn(true); 
-      })
-      .catch(error => {
-        if (error.code === 'auth/wrong-password') {
-          showAlert("beSafe | Erro", "Senha incorreta! Tente novamente.");
-        } else if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
-          showAlert("beSafe | Erro", "Verifique o e-mail e tente novamente!");
-        } else {
-          showAlert("beSafe | Erro", "Ocorreu um erro ao fazer login! Verifique o e-mail e a senha e tente novamente.");
-        }
-      });
+    setLoading(true);
+
+    setTimeout(() => {
+      if (!email || !password) {
+        setLoading(false);
+        showAlert("beSafe | Erro", "É necessário preencher ambos os campos para fazer login!");
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        setLoading(false);
+        showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
+        return;
+      }
+
+      if (password.length < 6) {
+        setLoading(false);
+        showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
+        return;
+      }
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          console.log('Usuário logado com:', user.email);
+          setHasLoggedIn(true);
+          setLoading(false);
+        })
+        .catch(error => {
+          setLoading(false);
+
+          if (error.code === 'auth/wrong-password' || error.message.includes("password")) {
+            showAlert("beSafe | Erro", "Senha incorreta! Tente novamente.");
+          } else if (error.code === 'auth/user-not-found' || error.message.includes("user")) {
+            showAlert("beSafe | Erro", "Verifique o e-mail e tente novamente!");
+          } else if (error.code === 'auth/invalid-email') {
+            showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
+          } else {
+            showAlert("beSafe | Erro", "Ocorreu um erro ao fazer login! Verifique o e-mail e a senha e tente novamente.");
+          }
+        });
+    }, 500);
   };
-  
+
+
 
   return (
     <KeyboardAvoidingView
@@ -112,6 +126,11 @@ const Login = ({ setHasLoggedIn }) => {
               style={styles.input}
               value={password}
               onChangeText={setPassword}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                  handleLogin();
+                }
+              }}              
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <Icon name={showPassword ? "eye" : "eye-off"} size={25} color="black" />
@@ -122,8 +141,13 @@ const Login = ({ setHasLoggedIn }) => {
             <Text style={styles.esqueceuasenhatxt}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>ENTRAR</Text>
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading} >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>ENTRAR</Text>
+
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cadastrese} onPress={() => navigation.navigate('Cadastro')}>
@@ -145,7 +169,7 @@ const Login = ({ setHasLoggedIn }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    fontFamily: 'BreeSerif',
+
   },
 
   scrollViewContainer: {
@@ -169,7 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: '#d5dbe3',
     color: 'black',
-    fontFamily: 'BreeSerif',
+
   },
 
   button: {
@@ -184,7 +208,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     textAlign: 'center',
-    fontFamily: 'BreeSerif',
+
   },
 
   esqueceuasenha: {
@@ -201,7 +225,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     textDecorationLine: 'underline',
-    fontFamily: 'BreeSerif',
+
   },
 
   cadastrese: {
@@ -216,7 +240,7 @@ const styles = StyleSheet.create({
     color: '#3a9ee4',
     textAlign: 'center',
     fontSize: 15,
-    fontFamily: 'BreeSerif',
+
   },
 
   buttonContainer: {

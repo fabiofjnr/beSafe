@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   pollContent: {
     marginTop: 10,
     fontSize: 16,
-    textAlign: 'left',
+    textAlign: 'center',
     width: '100%',
     color: 'black',
     fontFamily: 'BreeSerif',

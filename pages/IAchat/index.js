@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, FlatList, TextInput, TouchableOpacity, Text, StyleSheet, Image, Keyboard, Animated } from 'react-native';
 import axios from 'axios';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -14,6 +14,7 @@ export default function ChatScreen() {
   const [chatHistory, setChatHistory] = useState([]);
   const [userMessage, setUserMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [keyboardOffset] = useState(new Animated.Value(0));
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -30,7 +31,8 @@ export default function ChatScreen() {
             setName(userName);
             const greetingMessage = {
               id: '1',
-              text: `Olá, ${userName}! Como posso te ajudar hoje?`,
+              text: `Olá, ${userName}! Eu sou a Safira, sua psicóloga online. Este é um espaço seguro e confidencial para você se expressar livremente. Lembre-se: você é incrível e merece um lugar acolhedor para refletir, desabafar e buscar apoio. Estou aqui para ouvir você. Como posso ajudar hoje?`,
+
               sender: 'bot',
             };
             setChatHistory([greetingMessage]);
@@ -43,6 +45,29 @@ export default function ChatScreen() {
 
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
+      Animated.timing(keyboardOffset, {
+        toValue: event.endCoordinates.height * 0.8, 
+        duration: 100,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, [keyboardOffset]);
 
   const handleSend = async () => {
     if (!userMessage.trim() || isSending) return;
@@ -61,7 +86,7 @@ export default function ChatScreen() {
       const response = await axios.post(
         'https://api.cohere.ai/v1/generate',
         {
-          prompt: `Você é uma psicóloga online... Contexto: ${context}\nUsuário: "${userMessage}"\nBot:`,
+          prompt: `Seu nome é Safira, você é uma psicóloga online do aplicativo beSafe. Seja humana, faça a pessoa se sentir segura e num ambiente confortável. Aja como uma psicóloga humana... Contexto: ${context}\nUsuário: "${userMessage}"\nBot:`,
           model: 'command-xlarge-nightly',
           max_tokens: 300,
           temperature: 0.7,
@@ -93,23 +118,38 @@ export default function ChatScreen() {
 
   const renderItem = ({ item }) => (
     <View style={[
-      styles.bubble,
-      item.sender === 'user'
-        ? (isDarkMode ? styles.darkUserBubble : styles.userBubble)
-        : (isDarkMode ? styles.darkBotBubble : styles.botBubble),
-      { alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start' }
+      styles.messageContainer,
+      { flexDirection: item.sender === 'user' ? 'row-reverse' : 'row' }
     ]}>
-      <Text style={[
-        styles.text,
-        isDarkMode && (item.sender === 'user' ? styles.darkUserText : styles.darkBotText)
+      {item.sender === 'bot' && (
+        <Image source={require('../../assets/IAbeSafe.png')} style={styles.messageImage} />
+      )}
+      <View style={[
+        styles.bubble,
+        item.sender === 'user'
+          ? (isDarkMode ? styles.darkUserBubble : styles.userBubble)
+          : (isDarkMode ? styles.darkBotBubble : styles.botBubble),
       ]}>
-        {item.text}
-      </Text>
+        <Text style={[
+          styles.text,
+          isDarkMode && (item.sender === 'user' ? styles.darkUserText : styles.darkBotText)
+        ]}>
+          {item.text}
+        </Text>
+      </View>
     </View>
   );
 
   return (
     <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <View style={[
+        styles.header,
+        { borderBottomColor: isDarkMode ? '#8bb0c9' : '#3a9ee4' } 
+      ]}>
+        <Image source={require('../../assets/IAbeSafe.png')} style={styles.profileImage} />
+        <Text style={[styles.botName, isDarkMode && styles.darkBotName]}>Safira</Text>
+      </View>
+
       <FlatList
         data={isSending ? [...chatHistory, { id: 'typing', text: 'Digitando...', sender: 'bot' }] : chatHistory}
         renderItem={renderItem}
@@ -117,18 +157,24 @@ export default function ChatScreen() {
         contentContainerStyle={styles.chatContainer}
       />
 
-      <View style={[styles.inputContainer, isDarkMode && styles.darkInputContainer]}>
+      <Animated.View style={[styles.inputContainer, isDarkMode && styles.darkInputContainer, { marginBottom: keyboardOffset }]}>
         <TextInput
           style={[styles.input, isDarkMode && styles.darkInput]}
           value={userMessage}
           onChangeText={setUserMessage}
           placeholder="Digite sua mensagem..."
           placeholderTextColor={isDarkMode ? 'white' : '#666'}
+          onSubmitEditing={handleSend}
+          onKeyPress={({ nativeEvent }) => {
+            if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+              handleSend();
+            }
+          }}
         />
         <TouchableOpacity style={[styles.button, isDarkMode && styles.darkButton]} onPress={handleSend}>
           <Text style={[styles.buttonText, isDarkMode && styles.darkButtonText]}>ENVIAR</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -145,24 +191,54 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 15,
   },
+  header: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    marginTop: 30,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 30,
+    marginBottom: 5,
+  },
+  botName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  darkBotName: {
+    color: '#f0f0f0',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  messageImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    marginHorizontal: 5,
+  },
   bubble: {
     borderRadius: 20,
     padding: 18,
-    marginVertical: 5,
     maxWidth: '80%',
     borderWidth: 0.5,
     borderColor: '#ccc',
   },
   userBubble: {
     backgroundColor: '#3a9ee4',
-    alignSelf: 'flex-end',
   },
   darkUserBubble: {
     backgroundColor: '#005a99',
   },
   botBubble: {
     backgroundColor: '#ADD8F6',
-    alignSelf: 'flex-start',
   },
   darkBotBubble: {
     backgroundColor: '#8bb0c9',

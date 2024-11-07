@@ -7,7 +7,7 @@ const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(null); // Inicializa como null
+  const [isDarkMode, setIsDarkMode] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
   const user = auth.currentUser;
 
@@ -19,12 +19,12 @@ export const ThemeProvider = ({ children }) => {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setIsDarkMode(data.isDarkMode || false); // Aplica tema salvo ou padrão claro
+          setIsDarkMode(data.isDarkMode || false); 
         } else {
-          setIsDarkMode(false); // Tema padrão claro para novos usuários
+          setIsDarkMode(false); 
         }
       } else {
-        setIsDarkMode(false); // Tema padrão claro para usuários não logados
+        setIsDarkMode(false); 
       }
       setIsLoading(false);
     };
@@ -42,8 +42,7 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  // Só renderiza após a preferência do tema ser definida
-  if (isLoading || isDarkMode === null) return null; // ou exibir um componente de carregamento
+  if (isLoading || isDarkMode === null) return null;
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>

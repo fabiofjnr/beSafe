@@ -475,6 +475,11 @@ const Posts = () => {
               placeholder="Escreva um comentário..."
               value={newComment}
               onChangeText={setNewComment}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                  handleComment(item.id);
+                }
+              }}
             />
             <TouchableOpacity
               style={styles.botaoEnviar}
@@ -797,6 +802,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginHorizontal: 20,
     alignItems: "center",
+    textAlign: "center",
     width: "85%",
     marginLeft: "8%",
     borderWidth: 1,
@@ -830,9 +836,10 @@ const styles = StyleSheet.create({
   postContent: {
     marginTop: 10,
     fontSize: 16,
-    textAlign: "left",
+    textAlign: "center",
     width: "100%",
     fontFamily: "BreeSerif",
+
   },
   postActions: {
     flexDirection: "row",

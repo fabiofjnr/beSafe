@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
+import { Image, View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Keyboard, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { auth } from '../../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -11,6 +11,7 @@ const RecSenha = ({ navigation }) => {
     const [alertTitle, setAlertTitle] = useState('');
     const [alertMessage, setAlertMessage] = useState('');
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const showAlert = (title, message) => {
         setAlertTitle(title);
@@ -19,29 +20,36 @@ const RecSenha = ({ navigation }) => {
     };
 
     const handleResetPassword = async () => {
-        if (!email.trim()) {
-            showAlert('beSafe | Erro', 'Por favor, insira seu e-mail.');
-            return;
-        }
-
-        try {
-            console.log('E-mail:', email);
-
-            // Enviar diretamente o e-mail de redefinição
-            await sendPasswordResetEmail(auth, email);
-            showAlert('beSafe | Sucesso', 'E-mail de redefinição de senha enviado!');
-        } catch (error) {
-            console.error('Erro ao enviar e-mail de redefinição:', error);
-
-            if (error.code === 'auth/user-not-found') {
-                showAlert('beSafe | Erro', 'Nenhum usuário foi encontrado com este e-mail.');
-            } else if (error.code === 'auth/invalid-email') {
-                showAlert('beSafe | Erro', 'Por favor, insira um e-mail válido!');
-            } else {
-                showAlert('beSafe | Erro', 'Erro ao enviar e-mail de redefinição!');
+        setLoading(true);
+    
+        setTimeout(async () => {
+            if (!email.trim()) {
+                setLoading(false);
+                showAlert('beSafe | Erro', 'Por favor, insira seu e-mail.');
+                return;
             }
-        }
+    
+            try {
+                console.log('E-mail:', email);
+                await sendPasswordResetEmail(auth, email);
+                showAlert('beSafe | Sucesso', 'E-mail de redefinição de senha enviado!');
+            } catch (error) {
+                console.error('Erro ao enviar e-mail de redefinição:', error);
+    
+                if (error.code === 'auth/user-not-found') {
+                    showAlert('beSafe | Erro', 'Nenhum usuário foi encontrado com este e-mail.');
+                } else if (error.code === 'auth/invalid-email') {
+                    showAlert('beSafe | Erro', 'Por favor, insira um e-mail válido!');
+                } else {
+                    showAlert('beSafe | Erro', 'Erro ao enviar e-mail de redefinição!');
+                }
+            } finally {
+                setLoading(false);
+            }
+        }, 500); // Ajuste o tempo conforme necessário
     };
+    
+    
 
     useEffect(() => {
         const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -82,10 +90,23 @@ const RecSenha = ({ navigation }) => {
                             style={styles.input}
                             value={email}
                             onChangeText={setEmail}
+                            onKeyPress={({ nativeEvent }) => {
+                                if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                                    handleResetPassword();
+                                }
+                            }}
                         />
                     </View>
-                    <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-                        <Text style={styles.buttonText}>ENVIAR E-MAIL</Text>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleResetPassword}
+                        disabled={loading} 
+                    >
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                        ) : (
+                            <Text style={styles.buttonText}>ENVIAR E-MAIL</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -121,7 +142,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         fontWeight: 'bold',
         color: '#3a9ee4',
-        fontFamily: 'BreeSerif',
     },
     input: {
         height: 40,
@@ -131,7 +151,6 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         backgroundColor: '#d5dbe3',
         color: 'black',
-        fontFamily: 'BreeSerif',
     },
     button: {
         backgroundColor: '#3a9ee4',
@@ -140,11 +159,11 @@ const styles = StyleSheet.create({
         padding: 13,
         marginBottom: 10,
         borderRadius: 15,
+        alignItems: 'center',
     },
     buttonText: {
         color: 'white',
         textAlign: 'center',
-        fontFamily: 'BreeSerif',
     },
     inputcontainer: {
         flexDirection: 'row',

@@ -20,8 +20,8 @@ const IntroTutorial = ({ currentStep = 0, onNext, onClose }) => {
             icon: "phone-in-talk"
         },
         { 
-            title: "Chat com I.A", 
-            message: "Converse com nossa Inteligência Artificial para conselhos práticos e apoio emocional imediato!",
+            title: "Converse com a Safira",
+            message: "Converse com a Safira, nossa Inteligência Artificial desenvolvida para oferecer apoio emocional imediato e conselhos práticos sempre que precisar!",
             icon: "chat"
         },
         { 

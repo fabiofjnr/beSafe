@@ -1,21 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Dimensions, ScrollView } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useTheme } from '../../ThemeContext';
+import AlertaLogin from '../Alertas/AlertaLogout';
 
 const { width, height } = Dimensions.get('window');
 
 const SOS = () => {
-
   const { isDarkMode } = useTheme();
-  
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [redirectAction, setRedirectAction] = useState(null);
+
+  const showAlert = (message, action) => {
+    setAlertMessage(message);
+    setRedirectAction(() => action);
+    setAlertVisible(true);
+  };
+
+  const handleConfirm = () => {
+    if (redirectAction) {
+      redirectAction();
+    }
+    setAlertVisible(false); 
+  };
+
+  const handleCancel = () => {
+    setAlertVisible(false);
+  };
+
   return (
-    <ScrollView 
-      style={{ flex: 1, backgroundColor: isDarkMode ? '#1A1F36' : 'white' }} 
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDarkMode ? '#1A1F36' : 'white' }}
       contentContainerStyle={styles.scrollViewContent}
     >
-      <View style={[styles.caixinha, styles.caixinha1, {backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]}>
-        <TouchableOpacity style={styles.caixinhaContent} onPress={() => Linking.openURL('tel:188')}>
+      <View style={[styles.caixinha, styles.caixinha1, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]}>
+        <TouchableOpacity
+          style={styles.caixinhaContent}
+          onPress={() => showAlert("Você será redirecionado para o aplicativo de telefone do seu aparelho para entrar em contato com um voluntário do Centro de Valorização da Vida.", () => Linking.openURL('tel:188'))}
+        >
           <FontAwesome name="phone" size={40} color="black" />
           <View style={styles.textContainer}>
             <Text style={styles.caixinhaTitle}>188</Text>
@@ -26,30 +49,42 @@ const SOS = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.caixinha, styles.caixinha2, {backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6'}]}>
-        <TouchableOpacity style={styles.caixinhaContent} onPress={() => Linking.openURL('https://servidorseguro.mysuite1.com.br/client/chatan.php?&h=cd1edd1547c5e91058f4f6b95511c427&inf=&sl=cvw')}>
+      <View style={[styles.caixinha, styles.caixinha2, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]}>
+        <TouchableOpacity
+          style={styles.caixinhaContent}
+          onPress={() => showAlert("Você será redirecionado para o site do Centro de Valorização de Vida, para ser atendido por um voluntário treinado.", () => Linking.openURL('https://servidorseguro.mysuite1.com.br/client/chatan.php?&h=cd1edd1547c5e91058f4f6b95511c427&inf=&sl=cvw'))}
+        >
           <FontAwesome name="comments" size={40} color="black" />
           <View style={styles.textContainer}>
             <Text style={styles.caixinhaTitle}>Voluntário Treinado</Text>
             <Text style={styles.caixinhaText}>
-              Caso queira ser atendido(a) por um voluntário com respeito e anonimato, que guardará sigilo sobre tudo o que for dito, clique no botão de chat ao lado. Os voluntários são treinados para conversar com todas as pessoas que procuram ajuda e apoio emocional.
+              Caso queira ser atendido(a) por um voluntário com respeito e anonimato, que guardará sigilo sobre tudo o que for dito, clique no botão. Os voluntários são treinados para conversar com todas as pessoas que procuram ajuda e apoio emocional.
             </Text>
           </View>
         </TouchableOpacity>
       </View>
+
+      <AlertaLogin
+        visible={alertVisible}
+        title="😉  • Atenção"
+        message={alertMessage} 
+        onClose={handleCancel} 
+        onConfirm={handleConfirm}
+      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   scrollViewContent: {
-    paddingHorizontal: 20, 
-    paddingTop: height * 0.05, 
-    paddingBottom: height * 0.05, 
-    justifyContent: 'center', 
+    paddingHorizontal: 20,
+    paddingTop: height * 0.05,
+    paddingBottom: height * 0.05,
+    justifyContent: 'center',
     alignItems: 'center',
-    flexGrow: 1, 
-  },  title: {
+    flexGrow: 1,
+  },
+  title: {
     fontSize: width * 0.1,
     color: '#3a9ee4',
     marginBottom: height * 0.05,
@@ -66,10 +101,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
   },
-  caixinha1: {
-  },
-  caixinha2: {
-  },
+  caixinha1: {},
+  caixinha2: {},
   caixinhaContent: {
     flexDirection: 'row',
     alignItems: 'center',

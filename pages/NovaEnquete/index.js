@@ -124,6 +124,11 @@ const NovaEnquete = () => {
          placeholderTextColor="black"
         value={option2}
         onChangeText={setOption2}
+        onKeyPress={({ nativeEvent }) => {
+          if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+            handleSubmit();
+          }
+        }}
       />
       <AlertaLogin
         visible={showAlert}

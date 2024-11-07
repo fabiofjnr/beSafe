@@ -65,7 +65,7 @@ const AppTabs = ({ setIsLoggedIn }) => {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: isDarkMode ? '#8bb0c9' : '#3a9ee4',
-          height: '8.9%',
+          height: '8.5%',
           borderTopWidth: 0,
         },
         headerStyle: {
@@ -107,7 +107,7 @@ const AppTabs = ({ setIsLoggedIn }) => {
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="chat" color={color} marginTop={5} size={35} />
           ),
-          headerTitle: 'Chat com I.A.',
+          headerShown: false,
         }} />
       <Tab.Screen
         name="Salvos"

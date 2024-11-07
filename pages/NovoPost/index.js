@@ -103,6 +103,11 @@ const NovoPost = () => {
           value={content}
           placeholderTextColor={isDarkMode ? 'white' : 'black'}
           onChangeText={setContent}
+          onKeyPress={({ nativeEvent }) => {
+            if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+              handlePost();
+            }
+          }}
         />
       </View>
       <AlertaLogin

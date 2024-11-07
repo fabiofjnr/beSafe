@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { auth, db } from '../../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -16,8 +16,9 @@ const Cadastro = ({ setIsRegistering }) => {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); 
+  const [showPassword, setShowPassword] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -45,36 +46,43 @@ const Cadastro = ({ setIsRegistering }) => {
   };
 
   const handleRegister = async () => {
+    setLoading(true);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
     if (!email || !password || !confirmPassword || !name) {
+      setLoading(false);  
       showAlert("beSafe | Erro", "Todos os campos devem ser preenchidos!");
       return;
     }
-  
+
     if (!isValidEmail(email)) {
+      setLoading(false);
       showAlert("beSafe | Erro", "Por favor, insira um e-mail válido!");
       return;
     }
-  
+
     if (password.length < 6) {
+      setLoading(false);
       showAlert("beSafe | Erro", "A senha deve ter no mínimo 6 caracteres!");
       return;
     }
-  
+
     if (password !== confirmPassword) {
+      setLoading(false);
       showAlert("beSafe | Erro", "As senhas não conferem!");
       return;
     }
-  
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-  
+
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: user.email,
       });
-  
-      setIsRegistering(true); 
+
+      setIsRegistering(true);
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
         showAlert("beSafe | Erro", "Esse e-mail já está em uso! Tente novamente com outro e-mail.");
@@ -82,9 +90,11 @@ const Cadastro = ({ setIsRegistering }) => {
         console.error(error);
         showAlert("beSafe | Erro", "Ocorreu um erro ao criar a conta. Tente novamente.");
       }
+    } finally {
+      setLoading(false); 
     }
   };
-  
+
 
   return (
     <KeyboardAvoidingView
@@ -94,7 +104,7 @@ const Cadastro = ({ setIsRegistering }) => {
       <ScrollView
         contentContainerStyle={[
           styles.scrollViewContainer,
-          isKeyboardVisible && { paddingBottom: 150 } 
+          isKeyboardVisible && { paddingBottom: 150 }
         ]}
         keyboardShouldPersistTaps="handled"
         scrollEnabled={isKeyboardVisible}
@@ -135,7 +145,7 @@ const Cadastro = ({ setIsRegistering }) => {
               placeholder="Senha"
               placeholderTextColor="black"
               autoCapitalize="none"
-              secureTextEntry={!showPassword} 
+              secureTextEntry={!showPassword}
               style={styles.input}
               value={password}
               onChangeText={setPassword}
@@ -148,19 +158,30 @@ const Cadastro = ({ setIsRegistering }) => {
               placeholder="Confirme a senha"
               autoCapitalize="none"
               placeholderTextColor="black"
-              secureTextEntry={!showPassword} 
+              secureTextEntry={!showPassword}
               style={styles.input}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+                  handleRegister();
+                }
+              }}
+              
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <Icon name={showPassword ? "eye" : "eye-off"} size={25} color="black" />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>CADASTRAR</Text>
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>CADASTRAR</Text>
+            )}
           </TouchableOpacity>
+
 
           {alertVisible && (
             <AlertaLogin
@@ -201,7 +222,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: '#d5dbe3',
     color: 'black',
-    fontFamily: 'BreeSerif',
   },
 
   button: {
@@ -216,8 +236,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     textAlign: 'center',
-    fontWeight: 'bold',
-    fontFamily: 'BreeSerif',
   },
 
   img: {

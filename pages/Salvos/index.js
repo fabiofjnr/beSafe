@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   postContent: {
     marginTop: 10,
     fontSize: 16,
-    textAlign: 'left',
+    textAlign: 'center',
     width: '100%',
     fontFamily: 'BreeSerif',
   },

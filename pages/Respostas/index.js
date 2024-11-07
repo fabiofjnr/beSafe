@@ -178,16 +178,16 @@ const Respostas = () => {
       prevPosts.map((post) =>
         post.id === deletedComment.postId
           ? {
-              ...post,
-              comments: post.comments.filter(
-                (comment) => comment.id !== deletedComment.commentId
-              ),
-            }
+            ...post,
+            comments: post.comments.filter(
+              (comment) => comment.id !== deletedComment.commentId
+            ),
+          }
           : post
       )
     );
   };
-  
+
 
 
   const renderPost = ({ item }) => {
@@ -238,7 +238,7 @@ const Respostas = () => {
                 }
                 style={styles.commentProfilePicture}
               />
-              <Text style={styles.commentUser}>@{comment.user?.username}:</Text>
+              <Text style={styles.commentUser}>@{comment.user?.username || "username"}:</Text>
               <Text>{comment.content}</Text>
               {comment.userId === user.uid || isAdmin ? (
                 <TouchableOpacity
@@ -281,62 +281,62 @@ const Respostas = () => {
         { backgroundColor: isDarkMode ? "#1A1F36" : "white" },
       ]}
     >
-<AlertaExcluir
-  visible={alertVisible}
-  title={
-    <View style={{ alignItems: "center" }}>
-     <Text> <Icon name="delete" size={20} color="#3a9ee4" /> • Confirmar Exclusão</Text>
-    </View>
-  }
-  message="Você tem certeza que deseja excluir este comentário?"
-  onClose={() => setAlertVisible(false)}
-  onConfirm={handleDeleteComment}
-/>
+      <AlertaExcluir
+        visible={alertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text> <Icon name="delete" size={20} color="#3a9ee4" /> • Confirmar Exclusão</Text>
+          </View>
+        }
+        message="Você tem certeza que deseja excluir este comentário?"
+        onClose={() => setAlertVisible(false)}
+        onConfirm={handleDeleteComment}
+      />
 
-<AlertaDenuncia
-  visible={reportAlertVisible}
-  title={
-    <View style={{ alignItems: "center" }}>
-     <Text> <Icon name="report" size={20} color="#3a9ee4" /> • Confirmar Denúncia</Text>
-    </View>
-  }
-  message="Você confirma a denúncia deste comentário?"
-  onClose={() => setReportAlertVisible(false)}
-  onConfirm={confirmReportComment}
-/>
+      <AlertaDenuncia
+        visible={reportAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text> <Icon name="report" size={20} color="#3a9ee4" /> • Confirmar Denúncia</Text>
+          </View>
+        }
+        message="Você confirma a denúncia deste comentário?"
+        onClose={() => setReportAlertVisible(false)}
+        onConfirm={confirmReportComment}
+      />
 
-<AlertaLogin
-  visible={successAlertVisible}
-  title={
-    <View style={{ alignItems: "center" }}>
-     <Text> <Icon name="check-circle" size={20} color="#27ae60" /> • Comentário excluído</Text>
-    </View>
-  }
-  message="Comentário excluído com sucesso"
-  onClose={() => setSuccessAlertVisible(false)}
-/>
+      <AlertaLogin
+        visible={successAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text> <Icon name="check-circle" size={20} color="#27ae60" /> • Comentário excluído</Text>
+          </View>
+        }
+        message="Comentário excluído com sucesso"
+        onClose={() => setSuccessAlertVisible(false)}
+      />
 
-<AlertaLogin
-  visible={reportSuccessAlertVisible}
-  title={
-    <View style={{ alignItems: "center" }}>
-    <Text>  <Icon name="check-circle" size={20} color="#27ae60" /> • Sucesso</Text>
-    </View>
-  }
-  message="Agradecemos pela colaboração. A denúncia foi registrada e logo será analisada!"
-  onClose={() => setReportSuccessAlertVisible(false)}
-/>
+      <AlertaLogin
+        visible={reportSuccessAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text>  <Icon name="check-circle" size={20} color="#27ae60" /> • Sucesso</Text>
+          </View>
+        }
+        message="Agradecemos pela colaboração. A denúncia foi registrada e logo será analisada!"
+        onClose={() => setReportSuccessAlertVisible(false)}
+      />
 
-<AlertaLogin
-  visible={reportAlreadyReportedAlertVisible}
-  title={
-    <View style={{ alignItems: "center" }}>
-      <Text><Icon name="warning" size={20} color="#3a9ee4" /> • Aviso</Text>
-    </View>
-  }
-  message="Você já denunciou este comentário."
-  onClose={() => setReportAlreadyReportedAlertVisible(false)}
-/>
+      <AlertaLogin
+        visible={reportAlreadyReportedAlertVisible}
+        title={
+          <View style={{ alignItems: "center" }}>
+            <Text><Icon name="warning" size={20} color="#3a9ee4" /> • Aviso</Text>
+          </View>
+        }
+        message="Você já denunciou este comentário."
+        onClose={() => setReportAlreadyReportedAlertVisible(false)}
+      />
 
 
 
@@ -601,9 +601,10 @@ const styles = StyleSheet.create({
   postContent: {
     marginTop: 10,
     fontSize: 16,
-    textAlign: "left",
+    textAlign: "center",
     width: "100%",
     fontFamily: 'BreeSerif',
+    
   },
   postActions: {
     flexDirection: "row",
@@ -655,7 +656,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     textAlign: "right",
     alignItems: "right",
-    
+
   },
   noCommentsContainer: {
     flex: 1,
