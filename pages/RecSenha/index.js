@@ -5,7 +5,7 @@ import { auth } from '../../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import AlertaLogin from '../Alertas/AlertaLogin';
 
-const RecSenha = ({ navigation }) => {
+const RecSenha = () => {
     const [email, setEmail] = useState('');
     const [alertVisible, setAlertVisible] = useState(false);
     const [alertTitle, setAlertTitle] = useState('');
@@ -46,7 +46,7 @@ const RecSenha = ({ navigation }) => {
             } finally {
                 setLoading(false);
             }
-        }, 500); // Ajuste o tempo conforme necessário
+        }, 500); 
     };
     
     

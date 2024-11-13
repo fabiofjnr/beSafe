@@ -87,8 +87,6 @@ const Login = ({ setHasLoggedIn }) => {
     }, 500);
   };
 
-
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -169,22 +167,18 @@ const Login = ({ setHasLoggedIn }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
   },
-
   scrollViewContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
   },
-
   innerContainer: {
     width: '100%',
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-
   input: {
     height: 40,
     width: '100%',
@@ -193,9 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: '#d5dbe3',
     color: 'black',
-
   },
-
   button: {
     backgroundColor: '#3a9ee4',
     width: '100%',
@@ -204,13 +196,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 15,
   },
-
   buttonText: {
     color: 'white',
     textAlign: 'center',
-
   },
-
   esqueceuasenha: {
     backgroundColor: 'transparent',
     width: '100%',
@@ -219,15 +208,12 @@ const styles = StyleSheet.create({
     marginBottom: 70,
     marginTop: -5,
   },
-
   esqueceuasenhatxt: {
     color: '#3a9ee4',
     textAlign: 'center',
     fontSize: 16,
     textDecorationLine: 'underline',
-
   },
-
   cadastrese: {
     backgroundColor: 'transparent',
     width: '100%',
@@ -235,19 +221,15 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-
   cadastresetxt: {
     color: '#3a9ee4',
     textAlign: 'center',
     fontSize: 15,
-
   },
-
   buttonContainer: {
     flex: 1,
     width: '70%',
   },
-
   img: {
     width: '100%',
     height: 300,
@@ -255,12 +237,10 @@ const styles = StyleSheet.create({
     marginTop: 28,
     marginBottom: 28,
   },
-
   imglogin: {
     width: 40,
     height: 40,
   },
-
   login2: {
     marginTop: 10,
     marginBottom: 10,
@@ -268,11 +248,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   loginapps: {
     marginHorizontal: 10,
   },
-
   inputcontainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,12 +261,10 @@ const styles = StyleSheet.create({
     height: 50,
     width: 300,
   },
-
   icon: {
     marginRight: 10,
     width: 30,
   },
-
   eyeIcon: {
     position: 'absolute',
     right: 10,

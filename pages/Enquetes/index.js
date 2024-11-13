@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, TextInput, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { auth, db } from '../../firebase';
 import { doc, getDoc, getDocs, updateDoc, arrayUnion, deleteDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
@@ -7,21 +7,18 @@ import AlertaExcluir from '../Alertas/AlertaExcluir';
 import AlertaLogin from '../Alertas/AlertaLogin';
 import AlertaDenuncia from "../Alertas/AlertaDenuncia";
 import { Entypo, Ionicons, MaterialIcons } from '@expo/vector-icons';
-import axios from 'axios';
 import { PERSPECTIVE_API_KEY } from '@env';
 import { useTheme } from '../../ThemeContext';
 
-const Enquetes = () => {
+const Enquetes = ({ globalFontSize}) => {
   const { isDarkMode } = useTheme();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
   const [polls, setPolls] = useState([]);
-  const [reportedPolls, setReportedPolls] = useState([]);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [newComment, setNewComment] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [pollToDelete, setPollToDelete] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
@@ -35,7 +32,8 @@ const Enquetes = () => {
   const navigation = useNavigation();
   const currentUser = auth.currentUser;
   const adminEmails = ['fj878207@gmail.com', 'anacarolcorr07@gmail.com', 'isabella.barranjard@gmail.com', 'contaetec14@gmail.com'];
-  const API_KEY = PERSPECTIVE_API_KEY;
+
+  const styles = createStyles(globalFontSize);
 
   const navigateToNewPoll = () => {
     navigation.navigate('NovaEnquete');
@@ -68,8 +66,10 @@ const Enquetes = () => {
         const userData = userDoc.data();
         return { id: pollDoc.id, ...pollData, user: userData };
       }));
+  
+      pollsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
       setPolls(pollsData);
-
+  
       const selectedOptions = {};
       for (const poll of pollsData) {
         if (poll.option1.usersVoted?.includes(currentUser?.uid)) {
@@ -83,6 +83,7 @@ const Enquetes = () => {
       console.error('Erro ao buscar enquetes:', error);
     }
   };
+  
 
   const handleVote = async (pollId, option) => {
     if (!currentUser) {
@@ -136,86 +137,43 @@ const Enquetes = () => {
     }
   };
 
-  const handlePostComment = async (pollId) => {
-    if (!currentUser) {
-      setAlertMessage('Você precisa estar logado para comentar.');
-      setAlertVisible(true);
-      return;
-    }
-
-    const commentContent = typeof newComment === 'string' ? newComment.trim() : '';
-
-    if (!commentContent) {
-      setAlertMessage('O comentário não pode estar vazio.');
-      setAlertVisible(true);
-      return;
-    }
-
-    const isAppropriate = await checkComment(commentContent);
-    if (!isAppropriate) {
-      Alert.alert('Cuidado com o que diz!', 'Ei, você não pode dizer isso aqui!');
-      return;
-    }
-
-    const pollRef = doc(db, 'polls', pollId);
-    const userRef = doc(db, 'users', currentUser.uid);
-
-    try {
-      const userSnapshot = await getDoc(userRef);
-      const userData = userSnapshot.data();
-
-      const commentId = `${currentUser.uid}_${Date.now()}`;
-
-      const commentData = {
-        id: commentId,
-        userId: currentUser.uid,
-        username: userData.username,
-        profilePictureURL: userData.profilePictureURL,
-        content: commentContent,
-        timestamp: new Date(),
-      };
-
-      await updateDoc(pollRef, {
-        comments: arrayUnion(commentData),
-      });
-
-      setNewComment('');
-      fetchPolls();
-    } catch (error) {
-      console.error('Erro ao postar comentário:', error);
-    }
-  };
-
-  const checkComment = async (comment) => {
-    try {
-      const response = await axios.post(
-        `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${API_KEY}`,
-        {
-          comment: { text: comment },
-          languages: ['pt', 'en'],
-          requestedAttributes: { TOXICITY: {} },
-        }
-      );
-      const toxicityScore = response.data.attributeScores.TOXICITY.summaryScore.value;
-      return toxicityScore < 0.1;
-    } catch (error) {
-      console.error('Erro ao verificar o comentário:', error);
-      return false;
-    }
-  };
 
   const handleAlertConfirm = async () => {
     if (pollToDelete) {
       try {
-        await deleteDoc(doc(db, 'polls', pollToDelete));
-        setPollToDelete(null);
-        fetchPolls();
-        setAlertSuccessVisible(true);
+        const pollRef = doc(db, "polls", pollToDelete);
+        const pollSnapshot = await getDoc(pollRef);
+        const pollData = pollSnapshot.data();
+  
+        if (pollSnapshot.exists()) {
+          const isAdmin = adminEmails.includes(currentUser?.email);
+          const isOwner = pollData.userId === currentUser.uid;
+  
+          if (!isOwner && isAdmin) {
+            const notificationRef = collection(db, "notifications");
+            await addDoc(notificationRef, {
+              userId: pollData.userId,
+              message: `Sua enquete foi excluída por um administrador por ser inapropriada. Não repita este comportamento.`,
+              timestamp: serverTimestamp(),
+              read: false,
+            });
+          }
+  
+          await deleteDoc(pollRef);
+          setPollToDelete(null);
+          fetchPolls(); 
+          setShowAlert(false);
+  
+          setAlertMessage("Enquete excluída com sucesso!");
+          if (!isOwner && isAdmin) {
+            setAlertMessage("Enquete excluída por ser inapropriada!");
+          }
+          setAlertSuccessVisible(true);
+        }
       } catch (error) {
-        console.error('Erro ao excluir a enquete:', error);
+        console.error("Erro ao excluir a enquete:", error);
       }
     }
-    setShowAlert(false);
   };
 
   const handleAlertCancel = () => {
@@ -234,34 +192,34 @@ const Enquetes = () => {
 
   const handleReportPoll = async (pollId) => {
     const poll = polls.find((p) => p.id === pollId);
-
-    if (poll.reportedBy?.includes(currentUser.uid)) {
+  
+    if (poll.reportedBy?.includes(currentUser.email)) {
       setReportAlreadyReportedAlertVisible(true);
       return;
     }
-
-    setPollToReport(pollId);
+  
+    setPollToReport(poll);
     setReportAlertVisible(true);
   };
-
+  
   const confirmReportPoll = async () => {
     try {
       const reportRef = collection(db, 'reports');
       await addDoc(reportRef, {
-        pollId: pollToReport,
-        reportedBy: currentUser.uid,
+        pollId: pollToReport.id,
+        reportedCommentUser: pollToReport.user.name, 
         timestamp: serverTimestamp(),
-        content: polls.find((p) => p.id === pollToReport).content,
-        userId: polls.find((p) => p.id === pollToReport).userId,
+        content: `Enquete denunciada: \n${pollToReport.content || "Conteúdo não encontrado"}`,
+        userId: pollToReport.userId,
+        reportedBy: currentUser.email,
       });
-
+  
       setReportAlertVisible(false);
       setReportSuccessAlertVisible(true);
     } catch (error) {
       console.error('Erro ao denunciar a enquete:', error);
     }
   };
-
 
 
   const renderPoll = ({ item }) => {
@@ -281,11 +239,11 @@ const Enquetes = () => {
           </View>
           {(currentUser?.uid === item.userId || adminEmails.includes(currentUser?.email)) ? (
             <TouchableOpacity onPress={() => handleDeletePoll(item.id)} style={styles.deleteIcon}>
-              <MaterialIcons name="delete" size={24} color="black" />
+              <MaterialIcons name="delete" size={ 10 + globalFontSize} color="black" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => handleReportPoll(item.id)} style={styles.reportIcon}>
-              <MaterialIcons name="report" size={24} color="black" />
+              <MaterialIcons name="report" size={ 10 + globalFontSize} color="black" />
             </TouchableOpacity>
 
           )}
@@ -299,7 +257,7 @@ const Enquetes = () => {
             <Text style={styles.optionText}>
               {item.option1.text} ({item.option1.votes})
             </Text>
-            {userVoteOption === 1 && <Ionicons style={styles.check} name="checkmark-circle-outline" size={22} color="black" />}
+            {userVoteOption === 1 && <Ionicons style={styles.check} name="checkmark-circle-outline" size={ 8 + globalFontSize} color="black" />}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.optionButton, userVoteOption === 2 && styles.optionSelected]}
@@ -308,7 +266,7 @@ const Enquetes = () => {
             <Text style={styles.optionText}>
               {item.option2.text} ({item.option2.votes})
             </Text>
-            {userVoteOption === 2 && <Ionicons style={styles.check} name="checkmark-circle-outline" size={22} color="black" />}
+            {userVoteOption === 2 && <Ionicons style={styles.check} name="checkmark-circle-outline" size={ 8 + globalFontSize} color="black" />}
           </TouchableOpacity>
         </View>
       </View>
@@ -397,7 +355,6 @@ const Enquetes = () => {
           onClose={() => setReportSuccessAlertVisible(false)}
         />
       )}
-
       {reportAlreadyReportedAlertVisible && (
         <AlertaLogin
           visible={reportAlreadyReportedAlertVisible}
@@ -417,7 +374,11 @@ const Enquetes = () => {
       {showAlert && (
         <AlertaExcluir
           visible={showAlert}
-          title="Excluir Enquete?"
+          title={
+            <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+            <Ionicons name="trash-outline" size={20} color="red" /> • Confirmar Exclusão
+          </Text>
+          }
           message="Deseja excluir esta enquete?"
           onClose={() => setShowAlert(false)}
           onConfirm={handleAlertConfirm}
@@ -434,7 +395,11 @@ const Enquetes = () => {
       {alertSuccessVisible && (
         <AlertaLogin
           visible={alertSuccessVisible}
-          title="Sucesso!"
+          title={
+            <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+            <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+          </Text>
+          }
           message="Enquete excluída com sucesso!"
           onClose={() => setAlertSuccessVisible(false)}
         />
@@ -443,7 +408,8 @@ const Enquetes = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -467,20 +433,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 24,
+    fontSize: 10 + globalFontSize,
     color: '#000',
     marginBottom: 5,
     marginTop: 10,
     fontFamily: 'BreeSerif',
   },
   username: {
-    fontSize: 20,
+    fontSize: 6 + globalFontSize,
     color: '#000',
     marginBottom: 5,
     fontFamily: 'BreeSerif',
   },
   bio: {
-    fontSize: 13,
+    fontSize: -1 + globalFontSize,
     color: '#000',
     fontFamily: 'BreeSerif',
     marginBottom: 15,
@@ -503,40 +469,42 @@ const styles = StyleSheet.create({
     fontFamily: 'BreeSerif',
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+      flexWrap: "wrap", 
+      justifyContent: "space-around", 
     padding: 10,
-    backgroundColor: '#ADD8F6',
-    borderBottomColor: 'black',
+    backgroundColor: "#ADD8F6",
     borderTopWidth: 1,
-    marginBottom: 15,
   },
   navButton: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: '#ADD8F6',
+    flexBasis: "25%", 
+    minWidth: 80, 
+    marginVertical: 0, 
+    paddingVertical: 4,
+    alignItems: "center",
+    backgroundColor: "#ADD8F6",
   },
   navButtonText: {
-    color: 'black',
-    fontWeight: 'bold',
-    fontFamily: 'BreeSerif',
-    fontSize: 16,
+    color: "black",
+    fontWeight: "bold",
+    fontFamily: "BreeSerif",
+    fontSize: 11 + (globalFontSize / 3), 
   },
   navButton1: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: '#ADD8F6',
+    flexBasis: "25%", 
+    minWidth: 80, 
+    marginVertical: 0, 
+    paddingVertical: 4,
+    alignItems: "center",
+    backgroundColor: "#ADD8F6",
     borderBottomWidth: 1,
+
   },
   navButtonText1: {
-    color: 'black',
-    fontWeight: 'bold',
-    fontFamily: 'BreeSerif',
-    fontSize: 16,
+    color: "black",
+    fontWeight: "bold",
+    fontFamily: "BreeSerif",
+    fontSize: 11 + (globalFontSize / 3),
   },
   pollContainer: {
     borderRadius: 20,
@@ -563,7 +531,7 @@ const styles = StyleSheet.create({
   },
   pollName: {
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 2 + globalFontSize,
     fontFamily: 'BreeSerif',
   },
   pollUsername: {
@@ -571,7 +539,7 @@ const styles = StyleSheet.create({
   },
   pollContent: {
     marginTop: 10,
-    fontSize: 16,
+    fontSize: 2 + globalFontSize,
     textAlign: 'center',
     width: '100%',
     color: 'black',
@@ -581,16 +549,23 @@ const styles = StyleSheet.create({
     marginVertical: 8
   },
   optionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',  
+    padding: 10,
+    borderRadius: 8,
+    marginHorizontal: 5,
     backgroundColor: 'white',
-    padding: 8,
     marginTop: 6,
-    borderRadius: 10,
   },
   optionText: {
     color: 'black',
     fontWeight: 'bold',
     fontFamily: 'BreeSerif',
     marginTop: 0,
+    fontSize: 0 + globalFontSize,
+    textAlign: 'center',
   },
   noPollsContainer: {
     flex: 1,
@@ -598,7 +573,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   noPollsText: {
-    fontSize: 18,
+    fontSize: 4 + globalFontSize,
     color: '#000',
     fontFamily: 'BreeSerif',
   },
@@ -606,8 +581,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#C0C0C0'
   },
   check: {
-    marginLeft: '90%',
-    marginTop: -18,
+    marginLeft: 8,
+    alignSelf: 'center', 
+    width: globalFontSize * 1.5, 
+    height: globalFontSize * 1.5,
   },
   deleteIcon: {
     marginLeft: 185,
@@ -636,12 +613,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 4 + globalFontSize,
     color: '#000',
     fontFamily: 'BreeSerif',
+    textAlign: "center",
   },
   reportIcon: {
-    marginLeft: 210,
+    marginLeft: 185,
   },
 });
 

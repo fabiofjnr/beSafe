@@ -44,6 +44,7 @@
   },
   "private": true,
   "dependencies": {
+    "@react-native-community/slider": "^4.5.5",
     "express": "^4.21.1"
   }
 }

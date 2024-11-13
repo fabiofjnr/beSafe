@@ -5,10 +5,10 @@ import { auth, db } from '../../firebase';
 import { doc, getDoc, collection, query, getDocs, updateDoc, arrayRemove, orderBy, deleteDoc } from 'firebase/firestore';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AlertaExcluir from '../Alertas/AlertaExcluir';
-import AlertaLogin from '../Alertas/AlertaLogin'; 
+import AlertaLogin from '../Alertas/AlertaLogin';
 import { useTheme } from '../../ThemeContext';
 
-const Salvos = () => {
+const Salvos = ({ globalFontSize }) => {
 
   const { isDarkMode } = useTheme();
   const [savedPosts, setSavedPosts] = useState([]);
@@ -16,7 +16,7 @@ const Salvos = () => {
   const user = auth.currentUser;
   const [postToDelete, setPostToDelete] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false); 
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   const fetchSavedPosts = async () => {
     const userRef = doc(db, 'users', user.uid);
@@ -70,7 +70,7 @@ const Salvos = () => {
             savedPosts: arrayRemove(postId),
           });
         }
-        fetchSavedPosts(); 
+        fetchSavedPosts();
       }
     } catch (error) {
       console.error('Erro ao salvar o post:', error);
@@ -90,7 +90,7 @@ const Salvos = () => {
         fetchSavedPosts();
         setPostToDelete(null);
         setShowAlert(false);
-        setShowSuccessAlert(true); 
+        setShowSuccessAlert(true);
       } catch (error) {
         console.error('Erro ao excluir o post:', error);
       }
@@ -104,7 +104,7 @@ const Salvos = () => {
   );
 
   const renderPost = ({ item }) => {
-    const postSavedBy = item.savedBy || []; 
+    const postSavedBy = item.savedBy || [];
 
     return (
       <View style={[styles.postContainer, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6' }]}>
@@ -114,22 +114,28 @@ const Salvos = () => {
             style={styles.postProfilePicture}
           />
           <View style={styles.postUserInfo}>
-            <Text style={[styles.postName, {color: isDarkMode ? 'black' : 'black'}]}>{item.user?.name || 'Usuário'}</Text>
-            <Text style={[styles.postUsername, {color: isDarkMode ? 'black' : '#4F4F4F'}]}>@{item.user?.username || 'username'}</Text>
+            <Text style={[styles.postName, { color: isDarkMode ? 'black' : 'black', fontSize: 2 + globalFontSize }]}>
+              {item.user?.name || 'Usuário'}
+            </Text>
+            <Text style={[styles.postUsername, { color: isDarkMode ? 'black' : '#4F4F4F', fontSize: 0 + globalFontSize }]}>
+              @{item.user?.username || 'username'}
+            </Text>
           </View>
           {(item.userId === user.uid) && (
             <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDeletePost(item.id)}>
-              <MaterialIcons name="more-vert" size={24} color={isDarkMode ? 'white' : 'black'} />
+              <MaterialIcons name="more-vert" size={10 + globalFontSize} color={isDarkMode ? 'black' : 'black'} />
             </TouchableOpacity>
           )}
         </View>
-        <Text style={[styles.postContent, {color: isDarkMode ? 'black' : 'black'}]}>{item.content}</Text>
-        <Text style={[styles.postTimestamp, {color: isDarkMode ? 'black' : '#4F4F4F'}]}>
+        <Text style={[styles.postContent, { color: isDarkMode ? 'black' : 'black', fontSize: 2 + globalFontSize }]}>
+          {item.content}
+        </Text>
+        <Text style={[styles.postTimestamp, { color: isDarkMode ? 'black' : '#4F4F4F', fontSize: -2 + globalFontSize }]}>
           {item.timestamp?.toDate().toLocaleString()}
         </Text>
         <View style={styles.postActions}>
           <TouchableOpacity style={styles.icones} onPress={() => handleSavePost(item.id)}>
-            <Ionicons name={postSavedBy.includes(user.uid) ? 'bookmark' : 'bookmark-outline'} size={24} color={isDarkMode ? 'black' : 'black'} />
+            <Ionicons name={postSavedBy.includes(user.uid) ? 'bookmark' : 'bookmark-outline'} size={10 + globalFontSize} color={isDarkMode ? 'black' : 'black'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -137,14 +143,14 @@ const Salvos = () => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}>
-      <View style={[styles.header, {backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, {color: isDarkMode ? 'white' : 'black' }]}>
-          <Ionicons name="arrow-back" size={24} color={isDarkMode ? 'white' : 'black'} />
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}>
+      <View style={[styles.header, { backgroundColor: isDarkMode ? '#1A1F36' : 'white' }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { color: isDarkMode ? 'white' : 'black' }]}>
+          <Ionicons name="arrow-back" size={10 + globalFontSize} color={isDarkMode ? 'white' : 'black'} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, {color: isDarkMode ? 'white' : 'black'}]}></Text>
+        <Text style={[styles.headerTitle, { color: isDarkMode ? 'white' : 'black' }, { fontSize: 5 + globalFontSize }]}></Text>
       </View>
-      <View style={[styles.separator, {backgroundColor: isDarkMode ? 'white' : 'black' }]} />
+      <View style={[styles.separator, { backgroundColor: isDarkMode ? 'white' : 'black' }]} />
       {savedPosts.length > 0 ? (
         <FlatList
           data={savedPosts}
@@ -154,7 +160,7 @@ const Salvos = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, {color: isDarkMode ? 'white' : 'black'}]}>Você não salvou nenhuma publicação ainda.</Text>
+          <Text style={[styles.emptyText, { color: isDarkMode ? 'white' : 'black' }, { fontSize: 5 + globalFontSize }]}>Você não salvou nenhuma publicação ainda.</Text>
         </View>
       )}
       <AlertaExcluir
@@ -270,9 +276,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 18,
     color: '#000',
     fontFamily: 'BreeSerif',
+    textAlign: "center",
   },
 });
 

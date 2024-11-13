@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, TextInput, } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { auth, db } from "../../firebase";
@@ -19,7 +19,7 @@ const authorizedEmails = [
 ];
 const API_KEY = PERSPECTIVE_API_KEY;
 
-const Posts = () => {
+const Posts = ({ globalFontSize }) => {
   const { isDarkMode } = useTheme();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -44,6 +44,8 @@ const Posts = () => {
   const navigateToNewPost = () => {
     navigation.navigate("NovoPost");
   };
+
+  const styles = createStyles(globalFontSize);
 
   const fetchUserData = async () => {
     if (user) {
@@ -73,21 +75,33 @@ const Posts = () => {
       id: doc.id,
       ...doc.data(),
     }));
-
+  
     const postsWithUserData = await Promise.all(
       fetchedPosts.map(async (post) => {
         const userRef = doc(db, "users", post.userId);
         const userSnap = await getDoc(userRef);
+  
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          return { ...post, user: userData };
-        }
-        return post;
+          return {
+            ...post,
+            user: { 
+              username: userData.username || "username", 
+              ...userData 
+            }  
+          };
+        } 
+
+        return { 
+          ...post, 
+          user: { username: "Usuário desconhecido" } 
+        };
       })
     );
-
+  
     setPosts(postsWithUserData);
   };
+  
 
   const handleSavePost = async (postId) => {
     const userId = auth.currentUser.uid;
@@ -167,29 +181,36 @@ const Posts = () => {
   };
 
   const handleComment = async (postId) => {
+    if (!newComment.trim()) {
+      setAlertMessage("O comentário não pode estar vazio");
+      setAlertTitle("😶  • Erro");
+      setAlertVisible(true);
+      return;
+    }
+  
     const commentsRef = collection(db, "posts", postId, "comments");
     const user = auth.currentUser;
-
+  
     try {
       const isCommentAppropriate = await checkComment(newComment);
       if (!isCommentAppropriate) {
         setAlertMessage("Isso não pode ser dito aqui!");
+        setAlertTitle("☝️  • Cuidado com o que diz!");
         setAlertVisible(true);
-        setAlertTitle("Cuidado com o que diz!");
         return;
       }
-
+  
       await addDoc(commentsRef, {
         userId: user.uid,
         username: user.displayName,
         content: newComment,
         timestamp: serverTimestamp(),
       });
-      setNewComment("");
-      setSelectedPostId(null);
-      fetchPosts();
+      setNewComment(""); 
+      setSelectedPostId(null); 
+      fetchPosts(); 
       setAlertMessage("Comentário enviado com sucesso!");
-      setAlertTitle("Sucesso!");
+      setAlertTitle("✅  • Sucesso!");
       setAlertVisible(true);
     } catch (error) {
       console.error("Erro ao comentar no post:", error);
@@ -239,7 +260,10 @@ const Posts = () => {
     return userPosts;
   };
 
-  const handleReportPost = async (postId, postOwnerId) => {
+  const handleReportPost = async (postId, postOwnerId, postContent, postUser) => { 
+    console.log("Iniciando denúncia...");
+    console.log("Post User:", postUser);  
+  
     if (!postOwnerId) {
       console.error("ID do dono do post não definido");
       setAlertMessage("Não foi possível denunciar este post.");
@@ -247,14 +271,38 @@ const Posts = () => {
       return;
     }
   
-    if (user.uid !== postOwnerId && !reportedPosts.includes(postId)) {
-      setSelectedPostToReport({ postId, postOwnerId });
+    let userData = postUser;
+    if (!postUser?.username) {
+      try {
+        const userRef = doc(db, "users", postOwnerId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          userData = userSnap.data();
+          console.log("Dados do usuário carregados:", userData);
+        } else {
+          console.error("Usuário não encontrado no banco de dados.");
+          userData = { username: "Usuário desconhecido" };
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do usuário:", error);
+        userData = { username: "Usuário desconhecido" };
+      }
+    } else {
+      console.log("Username encontrado em postUser:", postUser.username);
+    }
+  
+    if (user.email !== postOwnerId && !reportedPosts.includes(postId)) {
+      setSelectedPostToReport({ 
+        postId, 
+        postOwnerId, 
+        content: postContent, 
+        user: userData 
+      });
       setReportAlertVisible(true);
     } else {
       setReportAlreadyReportedAlertVisible(true);
     }
   };
-  
 
   const confirmReportPost = async () => {
     if (selectedPostToReport) {
@@ -268,12 +316,13 @@ const Posts = () => {
 
         setReportedPosts([...reportedPosts, postId]);
 
-        const notificationRef = collection(db, "notifications");
+        const notificationRef = collection(db, "reports");
+
         await addDoc(notificationRef, {
-          userId: postOwnerId,
-          message: `Uma de suas publicações foi denunciada e está sob análise. Caso seja considerada inadequada, a publicação será excluída!`,
+          content: `Publicação denunciada: \n${selectedPostToReport.content || "Conteúdo não encontrado"}`,
+          author: selectedPostToReport.user.name || "Usuário desconhecido",
+          reportedBy: user.email,
           timestamp: serverTimestamp(),
-          read: false,
         });
 
         setReportSuccessAlertVisible(true);
@@ -318,11 +367,11 @@ const Posts = () => {
           setShowAlert(false);
           if (!isOwner && isAdmin) {
             setAlertMessage("Post excluído por ser inapropriado!");
-            setAlertTitle("Sucesso!");
+            setAlertTitle("✅  • Sucesso!");
             setAlertVisible(true);
           } else {
             setAlertMessage("Post excluído com sucesso!");
-            setAlertTitle("Sucesso!");
+            setAlertTitle("✅  • Sucesso!");
             setAlertVisible(true);
           }
         }
@@ -412,17 +461,15 @@ const Posts = () => {
               style={styles.deleteButton}
               onPress={() => confirmDeletePost(item.id)}
             >
-              <MaterialIcons name="delete" size={24} color="black" />
+              <MaterialIcons name="delete" size={10 + globalFontSize} color="black" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={styles.reportButton}
-              onPress={() => handleReportPost(item.id, item.userId)}
+              onPress={() => handleReportPost(item.id, item.userId, item.content, item.user)}
             >
-
-              <MaterialIcons name="report" size={24} color="black" />
+              <MaterialIcons name="report" size={10 + globalFontSize} color="black" />
             </TouchableOpacity>
-
           )}
 
         </View>
@@ -442,7 +489,7 @@ const Posts = () => {
               setSelectedPostId(selectedPostId === item.id ? null : item.id)
             }
           >
-            <Ionicons name="chatbubble-outline" size={24} color="black" />
+            <Ionicons name="chatbubble-outline" size={10 + globalFontSize} color="black" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.icones}
@@ -450,7 +497,7 @@ const Posts = () => {
           >
             <FontAwesome
               name={item.likes.includes(user.uid) ? "heart" : "heart-o"}
-              size={24}
+              size={10 + globalFontSize}
               color="red"
             />
             <Text style={styles.likeCount}>{item.likes.length}</Text>
@@ -463,7 +510,7 @@ const Posts = () => {
               name={
                 postSavedBy.includes(user.uid) ? "bookmark" : "bookmark-outline"
               }
-              size={24}
+              size={10 + globalFontSize}
               color="black"
             />
           </TouchableOpacity>
@@ -471,8 +518,9 @@ const Posts = () => {
         {selectedPostId === item.id && (
           <View style={styles.commentInputContainer}>
             <TextInput
-              style={styles.commentInput}
+              style={[styles.commentInput, { backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9', color: isDarkMode ? "white" : "black" }]}
               placeholder="Escreva um comentário..."
+              placeholderTextColor={isDarkMode ? "white" : "black"}
               value={newComment}
               onChangeText={setNewComment}
               onKeyPress={({ nativeEvent }) => {
@@ -482,10 +530,10 @@ const Posts = () => {
               }}
             />
             <TouchableOpacity
-              style={styles.botaoEnviar}
+              style={[styles.botaoEnviar, { backgroundColor: isDarkMode ? "#005a99" : "#3a9ee4" }]}
               onPress={() => handleComment(item.id)}
             >
-              <Text style={styles.submitCommentButton}>ENVIAR</Text>
+              <Text style={[styles.submitCommentButton, { color: isDarkMode ? "white" : "black" }]}>ENVIAR</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -639,7 +687,11 @@ const Posts = () => {
       </TouchableOpacity>
       <AlertaExcluir
         visible={showAlert}
-        title="Excluir Publicação?"
+        title={
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+          <Ionicons name="trash-outline" size={20} color="red" /> • Confirmar Exclusão
+        </Text>
+        }
         message="Deseja excluir esta publicação?"
         onClose={() => setShowAlert(false)}
         onConfirm={() => {
@@ -693,237 +745,252 @@ const Posts = () => {
         message="Você já denunciou esta publicação."
         onClose={() => setReportAlreadyReportedAlertVisible(false)}
       />
-
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  profileContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "white",
-    height: "33%",
-  },
-  profilePicture: {
-    width: 130,
-    height: 130,
-    borderRadius: 100,
-    marginRight: 35,
-    marginLeft: 30,
-    marginTop: 20,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 24,
-    color: "#000",
-    marginBottom: 5,
-    marginTop: 10,
-    fontFamily: "BreeSerif",
-  },
-  username: {
-    fontSize: 20,
-    color: "#000",
-    marginBottom: 5,
-    fontFamily: "BreeSerif",
-  },
-  bio: {
-    fontSize: 13,
-    color: "#000",
-    fontFamily: "BreeSerif",
-    marginBottom: 15,
-  },
-  editButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 33,
-    backgroundColor: "#3a9ee4",
-    borderRadius: 18,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-  },
-  editButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-    backgroundColor: "#ADD8F6",
-    borderTopWidth: 1,
-  },
-  navButton: {
-    flex: 1,
-    alignItems: "center",
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: "#ADD8F6",
-  },
-  navButtonText: {
-    color: "black",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-    fontSize: 16,
-  },
-  navButton1: {
-    flex: 1,
-    alignItems: "center",
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: "#ADD8F6",
-    borderBottomWidth: 1,
-  },
-  navButtonText1: {
-    color: "black",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-    fontSize: 16,
-  },
-  postsList: {
-    paddingBottom: 20,
-    marginTop: 15,
-  },
-  postContainer: {
-    backgroundColor: "#ADD8F6",
-    borderRadius: 15,
-    padding: 10,
-    marginVertical: 10,
-    marginHorizontal: 20,
-    alignItems: "center",
-    textAlign: "center",
-    width: "85%",
-    marginLeft: "8%",
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  postHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  postProfilePicture: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    marginRight: 10,
-  },
-  postUserInfo: {
-    flex: 1,
-    fontFamily: "BreeSerif",
-  },
-  postName: {
-    fontWeight: "bold",
-    fontSize: 16,
-    fontFamily: "BreeSerif",
-  },
-  postUsername: {
-    color: "#4F4F4F",
-    fontFamily: "BreeSerif",
-  },
-  postContent: {
-    marginTop: 10,
-    fontSize: 16,
-    textAlign: "center",
-    width: "100%",
-    fontFamily: "BreeSerif",
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "white",
+    },
+    profileContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: "white",
+      height: "33%",
+    },
+    profilePicture: {
+      width: 130,
+      height: 130,
+      borderRadius: 100,
+      marginRight: 35,
+      marginLeft: 30,
+      marginTop: 20,
+    },
+    infoContainer: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 10 + globalFontSize,
+      color: "#000",
+      marginBottom: 5,
+      marginTop: 10,
+      fontFamily: "BreeSerif",
+    },
+    username: {
+      fontSize: 6 + globalFontSize,
+      color: "#000",
+      marginBottom: 5,
+      fontFamily: "BreeSerif",
+    },
+    bio: {
+      fontSize: -1 + globalFontSize,
+      color: "#000",
+      fontFamily: "BreeSerif",
+      marginBottom: 15,
+    },
+    editButton: {
+      position: "absolute",
+      bottom: 20,
+      right: 33,
+      backgroundColor: "#3a9ee4",
+      borderRadius: 18,
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 5,
+    },
+    editButtonText: {
+      color: "#000",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-around",
+      padding: 10,
+      backgroundColor: "#ADD8F6",
+      borderTopWidth: 1,
+    },
+    navButton: {
+      flexBasis: "25%",
+      minWidth: 80,
+      marginVertical: 0,
+      paddingVertical: 4,
+      alignItems: "center",
+      backgroundColor: "#ADD8F6",
+    },
+    navButtonText: {
+      color: "black",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+      fontSize: 11 + (globalFontSize / 3),
+    },
+    navButton1: {
+      flexBasis: "25%",
+      minWidth: 80,
+      marginVertical: 0,
+      paddingVertical: 4,
+      alignItems: "center",
+      backgroundColor: "#ADD8F6",
+      borderBottomWidth: 1,
 
-  },
-  postActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    width: "100%",
-  },
-  icones: {
-    marginHorizontal: 20,
-  },
-  likeCount: {
-    marginLeft: 8,
-    color: "black",
-    fontFamily: "BreeSerif",
-  },
-  postTimestamp: {
-    fontSize: 12,
-    color: "#4F4F4F",
-    marginTop: 10,
-    marginBottom: 5,
-    fontFamily: "BreeSerif",
-  },
-  commentInputContainer: {
-    flexDirection: "row",
-    marginTop: 10,
-    alignItems: "center",
-  },
-  commentInput: {
-    flex: 1,
-    borderRadius: 8,
-    padding: 5,
-    fontFamily: "BreeSerif",
-    color: "black",
-    fontSize: 16,
-    backgroundColor: "white",
-    borderRadius: 8,
-  },
-  botaoEnviar: {
-    marginLeft: 20,
-    marginRight: 20,
-    backgroundColor: "#3a9ee4",
-    borderRadius: 8,
-    padding: 7,
-    width: "30%",
-    alignItems: "center",
-  },
-  submitCommentButton: {
-    color: "black",
-    fontFamily: "BreeSerif",
-  },
-  deleteButton: {
-    marginLeft: 10,
-  },
-  reportButton: {
-    marginLeft: 10,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#3a9ee4",
-    borderRadius: 30,
-    width: 60,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#000",
-    textAlign: "center",
-    fontFamily: "BreeSerif",
-  },
-});
+    },
+    navButtonText1: {
+      color: "black",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+      fontSize: 11 + (globalFontSize / 3),
+    },
+    postsList: {
+      paddingBottom: 20,
+      marginTop: 15,
+    },
+    postContainer: {
+      backgroundColor: "#ADD8F6",
+      borderRadius: 15,
+      padding: 10,
+      marginVertical: 10,
+      marginHorizontal: 20,
+      alignItems: "center",
+      textAlign: "center",
+      width: "85%",
+      marginLeft: "8%",
+      borderWidth: 1,
+      borderColor: "#ccc",
+    },
+    postHeader: {
+      flexDirection: "row",
+      flexWrap: 'wrap',
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+    },
+    postProfilePicture: {
+      width: 45,
+      height: 45,
+      borderRadius: 22,
+      marginRight: 10,
+    },
+    postUserInfo: {
+      flex: 1,
+      fontFamily: "BreeSerif",
+    },
+    postName: {
+      fontWeight: "bold",
+      fontSize: 2 + globalFontSize,
+      fontFamily: "BreeSerif",
+    },
+    postUsername: {
+      color: "#4F4F4F",
+      fontFamily: "BreeSerif",
+      fontSize: 0 + globalFontSize,
+    },
+    postContent: {
+      marginTop: 10,
+      fontSize: 2 + globalFontSize,
+      textAlign: "center",
+      width: "100%",
+      fontFamily: "BreeSerif",
+
+    },
+    postActions: {
+      flexDirection: "row",
+      flexWrap: 'wrap',
+      justifyContent: "space-between",
+      marginTop: 10,
+      width: "100%",
+    },
+    icones: {
+      marginHorizontal: 20,
+    },
+    likeCount: {
+      color: "black",
+      fontFamily: "BreeSerif",
+      fontSize: 0 + globalFontSize,
+      textAlign: 'center',
+    },
+    postTimestamp: {
+      fontSize: -2 + globalFontSize,
+      color: "#4F4F4F",
+      marginTop: 10,
+      marginBottom: 5,
+      fontFamily: "BreeSerif",
+      textAlign: 'center',
+    },
+    commentInputContainer: {
+      flexDirection: "row",
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      marginTop: 10,
+      alignItems: "center",
+    },
+    commentInput: {
+      flex: 1,
+      borderRadius: 8,
+      padding: 5,
+      fontFamily: "BreeSerif",
+      color: "black",
+      fontSize: 3 + globalFontSize,
+      backgroundColor: "white",
+      borderRadius: 8,
+      alignItems: "center",
+      width: '50%',
+      maxWidth: '80%',
+    },
+    botaoEnviar: {
+      marginLeft: 20,
+      marginRight: 20,
+      backgroundColor: "#3a9ee4",
+      borderRadius: 8,
+      padding: 7,
+      width: "30%",
+      alignItems: "center",
+    },
+    submitCommentButton: {
+      color: "black",
+      fontFamily: "BreeSerif",
+      fontSize: 2 + globalFontSize,
+    },
+    deleteButton: {
+      marginLeft: 10,
+    },
+    reportButton: {
+      marginLeft: 10,
+    },
+    fab: {
+      position: "absolute",
+      bottom: 20,
+      right: 20,
+      backgroundColor: "#3a9ee4",
+      borderRadius: 30,
+      width: 60,
+      height: 60,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.8,
+      shadowRadius: 2,
+      elevation: 5,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    emptyText: {
+      fontSize: 4 + globalFontSize,
+      color: "#000",
+      textAlign: "center",
+      fontFamily: "BreeSerif",
+    },
+  });
 
 export default Posts;

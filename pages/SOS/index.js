@@ -6,7 +6,7 @@ import AlertaLogin from '../Alertas/AlertaLogout';
 
 const { width, height } = Dimensions.get('window');
 
-const SOS = () => {
+const SOS = ({ globalFontSize }) => {
   const { isDarkMode } = useTheme();
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -29,6 +29,7 @@ const SOS = () => {
     setAlertVisible(false);
   };
 
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: isDarkMode ? '#1A1F36' : 'white' }}
@@ -41,8 +42,8 @@ const SOS = () => {
         >
           <FontAwesome name="phone" size={40} color="black" />
           <View style={styles.textContainer}>
-            <Text style={styles.caixinhaTitle}>188</Text>
-            <Text style={styles.caixinhaText}>
+            <Text style={[styles.caixinhaTitle, { fontSize: 20 + globalFontSize }]}>188</Text>
+            <Text style={[styles.caixinhaText, { fontSize: 8 + globalFontSize }]}>
               Caso esteja em uma situação em que desabafos não são mais suficientes, clique no botão de ligar ao lado para entrar em contato com o Centro de Valorização da Vida!
             </Text>
           </View>
@@ -56,8 +57,8 @@ const SOS = () => {
         >
           <FontAwesome name="comments" size={40} color="black" />
           <View style={styles.textContainer}>
-            <Text style={styles.caixinhaTitle}>Voluntário Treinado</Text>
-            <Text style={styles.caixinhaText}>
+            <Text style={[styles.caixinhaTitle, { fontSize: 20 + globalFontSize }]}>Voluntário Treinado</Text>
+            <Text style={[styles.caixinhaText, { fontSize: 8 + globalFontSize }]}>
               Caso queira ser atendido(a) por um voluntário com respeito e anonimato, que guardará sigilo sobre tudo o que for dito, clique no botão. Os voluntários são treinados para conversar com todas as pessoas que procuram ajuda e apoio emocional.
             </Text>
           </View>

@@ -5,7 +5,6 @@ import { auth, db } from '../../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import AlertaLogin from '../Alertas/AlertaLogin';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Cadastro = ({ setIsRegistering }) => {
   const [email, setEmail] = useState('');
@@ -17,7 +16,6 @@ const Cadastro = ({ setIsRegistering }) => {
   const [alertMessage, setAlertMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showIntro, setShowIntro] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -84,7 +82,9 @@ const Cadastro = ({ setIsRegistering }) => {
 
       setIsRegistering(true);
     } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.code === 'auth/invalid-email') {
+        showAlert("beSafe | Erro", "O e-mail inserido é inválido. Por favor, verifique e tente novamente.");
+      } else if (error.code === 'auth/email-already-in-use') {
         showAlert("beSafe | Erro", "Esse e-mail já está em uso! Tente novamente com outro e-mail.");
       } else {
         console.error(error);
@@ -94,7 +94,6 @@ const Cadastro = ({ setIsRegistering }) => {
       setLoading(false); 
     }
   };
-
 
   return (
     <KeyboardAvoidingView

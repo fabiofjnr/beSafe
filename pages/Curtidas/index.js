@@ -6,7 +6,7 @@ import { doc, getDoc, collection, query, getDocs, where, documentId, updateDoc, 
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../ThemeContext';
 
-const Curtidas = () => {
+const Curtidas = ({ globalFontSize}) => {
   const { isDarkMode } = useTheme();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -15,6 +15,8 @@ const Curtidas = () => {
   const [likedPosts, setLikedPosts] = useState([]);
   const navigation = useNavigation();
   const user = auth.currentUser;
+
+  const styles = createStyles(globalFontSize);
 
   const fetchUserData = async () => {
     if (user) {
@@ -113,7 +115,7 @@ const Curtidas = () => {
       </Text>
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.icones} onPress={() => handleUnlike(item.id)}>
-          <FontAwesome name="heart" size={24} color="red" />
+          <FontAwesome name="heart" size={ 10 + globalFontSize} color="red" />
           <Text style={styles.likeCount}>{item.likes?.length || 0}</Text>
         </TouchableOpacity>
       </View>
@@ -166,7 +168,8 @@ const Curtidas = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -190,20 +193,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 24,
+    fontSize: 10 + globalFontSize,
     color: '#000',
     marginBottom: 5,
     marginTop: 10,
     fontFamily: 'BreeSerif',
   },
   username: {
-    fontSize: 20,
+    fontSize: 6 + globalFontSize,
     color: '#000',
     marginBottom: 5,
     fontFamily: 'BreeSerif',
   },
   bio: {
-    fontSize: 13,
+    fontSize: -1 + globalFontSize,
     color: '#000',
     fontFamily: 'BreeSerif',
     marginBottom: 15,
@@ -226,39 +229,42 @@ const styles = StyleSheet.create({
     fontFamily: 'BreeSerif',
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+      flexWrap: "wrap", 
+      justifyContent: "space-around", 
     padding: 10,
-    backgroundColor: '#ADD8F6',
-    borderBottomColor: 'black',
+    backgroundColor: "#ADD8F6",
     borderTopWidth: 1,
   },
   navButton: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: '#ADD8F6',
+    flexBasis: "25%", 
+    minWidth: 80, 
+    marginVertical: 0, 
+    paddingVertical: 4,
+    alignItems: "center",
+    backgroundColor: "#ADD8F6",
   },
   navButtonText: {
-    color: 'black',
-    fontWeight: 'bold',
-    fontFamily: 'BreeSerif',
-    fontSize: 16,
+    color: "black",
+    fontWeight: "bold",
+    fontFamily: "BreeSerif",
+    fontSize: 11 + (globalFontSize / 3), 
   },
   navButton1: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: '#ADD8F6',
+    flexBasis: "25%", 
+    minWidth: 80, 
+    marginVertical: 0, 
+    paddingVertical: 4,
+    alignItems: "center",
+    backgroundColor: "#ADD8F6",
     borderBottomWidth: 1,
+
   },
   navButtonText1: {
-    color: 'black',
-    fontWeight: 'bold',
-    fontFamily: 'BreeSerif',
-    fontSize: 16,
+    color: "black",
+    fontWeight: "bold",
+    fontFamily: "BreeSerif",
+    fontSize: 11 + (globalFontSize / 3),
   },
   postsList: {
     paddingBottom: 20,
@@ -291,17 +297,17 @@ const styles = StyleSheet.create({
   },
   postName: {
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 2 + globalFontSize,
     fontFamily: 'BreeSerif',
   },
   postUsername: {
     color: '#4F4F4F',
-    fontSize: 14,
+    fontSize: 0 + globalFontSize,
     fontFamily: 'BreeSerif',
   },
   postContent: {
     marginTop: 10,
-    fontSize: 16,
+    fontSize: 2 + globalFontSize,
     textAlign: 'center',
     width: '100%',
     fontFamily: 'BreeSerif',
@@ -315,11 +321,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   likeCount: {
-    marginLeft: 8,
     color: 'black',
+    fontSize: 0 + globalFontSize,
+    textAlign: 'center',
   },
   postTimestamp: {
-    fontSize: 12,
+    fontSize: -2 + globalFontSize,
     color: '#4F4F4F',
     marginTop: 10,
     marginBottom: 5,
@@ -333,9 +340,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 4 + globalFontSize,
     color: '#000',
     fontFamily: 'BreeSerif',
+    textAlign: "center",
+    width: '90%',
   },
 });
 

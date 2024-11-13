@@ -3,11 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'reac
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebase';
 import { doc, setDoc, serverTimestamp, collection, getDoc } from 'firebase/firestore';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import AlertaLogin from '../Alertas/AlertaLogin';
 import { useTheme } from '../../ThemeContext';
 
-const NovaEnquete = () => {
+const NovaEnquete = ({ globalFontSize}) => {
   const { isDarkMode } = useTheme();
   const [content, setContent] = useState('');
   const [option1, setOption1] = useState('');
@@ -18,6 +18,8 @@ const NovaEnquete = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const navigation = useNavigation();
   const user = auth.currentUser;
+
+  const styles = createStyles(globalFontSize);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -132,7 +134,11 @@ const NovaEnquete = () => {
       />
       <AlertaLogin
         visible={showAlert}
-        title={alertTitle}
+        title={
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+          <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+        </Text>
+        }
         message={alertMessage}
         onClose={handleAlertClose}
       />
@@ -140,7 +146,8 @@ const NovaEnquete = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
@@ -157,16 +164,17 @@ const styles = StyleSheet.create({
   },
   publishButton: {
     backgroundColor: '#3a9ee4',
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 10 + globalFontSize / 2, 
     borderRadius: 15,
-    width: '35%',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
+    flexShrink: 1, 
   },
   publishButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 4 + globalFontSize,
     fontFamily: 'BreeSerif',
   },
   contentContainer: {
@@ -191,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginTop: 10,
     fontFamily: 'BreeSerif',
-    fontSize: 22,
+    fontSize: 8 + globalFontSize,
   },
   inputOption: {
     borderWidth: 1,
@@ -200,7 +208,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 16,
     fontFamily: 'BreeSerif',
-    fontSize: 20,
+    fontSize: 6 + globalFontSize,
     color: 'black',
   },
 });

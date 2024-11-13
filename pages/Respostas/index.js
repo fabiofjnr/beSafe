@@ -12,7 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const adminEmails = ["fj878207@gmail.com", "anacarolcorr07@gmail.com", "isabella.barranjard@gmail.com", "contaetec14@gmail.com",];
 
-const Respostas = () => {
+const Respostas = ({ globalFontSize }) => {
   const { isDarkMode } = useTheme();
   const [profilePicture, setProfilePicture] = useState(null);
   const [name, setName] = useState("");
@@ -23,7 +23,9 @@ const Respostas = () => {
   const [alertVisible, setAlertVisible] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [successAlertVisible, setSuccessAlertVisible] = useState(false);
-  const [userReceivedComments, setUserReceivedComments] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertSuccessVisible, setAlertSuccessVisible] = useState(false);
+  const [userReceivedComments] = useState(false);
   const navigation = useNavigation();
   const [reportAlertVisible, setReportAlertVisible] = useState(false);
   const [commentToReport, setCommentToReport] = useState(null);
@@ -31,6 +33,8 @@ const Respostas = () => {
   const [reportAlreadyReportedAlertVisible, setReportAlreadyReportedAlertVisible] = useState(false);
   const user = auth.currentUser;
   const isAdmin = adminEmails.includes(user?.email);
+
+  const styles = createStyles(globalFontSize);
 
   const fetchUserData = async () => {
     if (user) {
@@ -137,9 +141,9 @@ const Respostas = () => {
           await addDoc(collection(db, "reports"), {
             commentId: commentToReport.id,
             postId: commentToReport.postId,
-            commentContent: commentToReport.content,
+            commentContent: `Comentário denunciado:\n${commentToReport.content || "Conteúdo não encontrado"}`,
             reportedBy: user.email,
-            reportedCommentUser: commentToReport.user.username,
+            reportedCommentUser: commentToReport.user.name,
             timestamp: new Date(),
           });
           setReportSuccessAlertVisible(true);
@@ -155,47 +159,44 @@ const Respostas = () => {
     if (commentToDelete) {
       try {
         await deleteDoc(
-          doc(
-            db,
-            "posts",
-            commentToDelete.postId,
-            "comments",
-            commentToDelete.id
-          )
+          doc(db, "posts", commentToDelete.postId, "comments", commentToDelete.id)
         );
+
+        const isOwner = commentToDelete.userId === user.uid;
+  
+        if (!isOwner && isAdmin) {
+          const notificationRef = collection(db, "notifications");
+          await addDoc(notificationRef, {
+            userId: commentToDelete.userId,
+            postId: commentToDelete.postId,
+            commentId: commentToDelete.id,
+            message: `Seu comentário foi excluído por um administrador por ser inapropriado. Não repita este comportamento.`,
+            timestamp: new Date(),
+            read: false,
+          });
+        }
+  
         setAlertVisible(false);
         setCommentToDelete(null);
         fetchPostsWithComments();
         setSuccessAlertVisible(true);
+
+        setAlertMessage("Comentário excluída com sucesso!");
+        if (!isOwner && isAdmin) {
+          setAlertMessage("Comentário excluída por ser inapropriada!");
+        }
+        setAlertSuccessVisible(true);
       } catch (error) {
         console.error("Erro ao excluir comentário:", error);
       }
     }
   };
 
-  const onCommentDelete = (deletedComment) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === deletedComment.postId
-          ? {
-            ...post,
-            comments: post.comments.filter(
-              (comment) => comment.id !== deletedComment.commentId
-            ),
-          }
-          : post
-      )
-    );
-  };
-
-
-
   const renderPost = ({ item }) => {
     const isUserCommented = item.comments.some(
       (comment) => comment.userId === user.uid
     );
-    const isOwnPost = item.userId === user.uid;
-    const postBackgroundColor = isOwnPost
+    const isOwnPost = item.userId === user.uid
       ? "#ADD8F6"
       : isUserCommented
         ? "#ADD8F6"
@@ -239,7 +240,7 @@ const Respostas = () => {
                 style={styles.commentProfilePicture}
               />
               <Text style={styles.commentUser}>@{comment.user?.username || "username"}:</Text>
-              <Text>{comment.content}</Text>
+              <Text style={styles.commentContent}>{comment.content}</Text>
               {comment.userId === user.uid || isAdmin ? (
                 <TouchableOpacity
                   onPress={() => {
@@ -250,7 +251,7 @@ const Respostas = () => {
                 >
                   <MaterialIcons
                     name="delete"
-                    size={22}
+                    size={8 + globalFontSize}
                     style={styles.commentIcon}
                   />
                 </TouchableOpacity>
@@ -261,11 +262,10 @@ const Respostas = () => {
                 >
                   <MaterialIcons
                     name="report"
-                    size={22}
+                    size={8 + globalFontSize}
                     style={styles.commentIcon}
                   />
                 </TouchableOpacity>
-
               )}
             </View>
           )}
@@ -284,9 +284,9 @@ const Respostas = () => {
       <AlertaExcluir
         visible={alertVisible}
         title={
-          <View style={{ alignItems: "center" }}>
-            <Text> <Icon name="delete" size={20} color="#3a9ee4" /> • Confirmar Exclusão</Text>
-          </View>
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+          <Ionicons name="trash-outline" size={20} color="red" /> • Confirmar Exclusão
+        </Text>
         }
         message="Você tem certeza que deseja excluir este comentário?"
         onClose={() => setAlertVisible(false)}
@@ -464,215 +464,222 @@ const Respostas = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  profileContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "white",
-    height: "33%",
-  },
-  profilePicture: {
-    width: 130,
-    height: 130,
-    borderRadius: 100,
-    marginRight: 35,
-    marginLeft: 30,
-    marginTop: 20,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 24,
-    color: "#000",
-    marginBottom: 5,
-    marginTop: 10,
-    fontFamily: "BreeSerif",
-  },
-  username: {
-    fontSize: 20,
-    color: "#000",
-    marginBottom: 5,
-    fontFamily: "BreeSerif",
-  },
-  bio: {
-    fontSize: 13,
-    color: "#000",
-    fontFamily: "BreeSerif",
-    marginBottom: 15,
-  },
-  editButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 33,
-    backgroundColor: "#3a9ee4",
-    borderRadius: 18,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-  },
-  editButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-    backgroundColor: "#ADD8F6",
-    borderBottomColor: "black",
-    borderTopWidth: 1,
-    marginBottom: 15,
-  },
-  navButton: {
-    flex: 1,
-    alignItems: "center",
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: "#ADD8F6",
-  },
-  navButtonText: {
-    color: "black",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-    fontSize: 16,
-  },
-  navButton1: {
-    flex: 1,
-    alignItems: "center",
-    padding: 2,
-    marginHorizontal: 5,
-    backgroundColor: "#ADD8F6",
-    borderBottomWidth: 1,
-  },
-  navButtonText1: {
-    color: "black",
-    fontWeight: "bold",
-    fontFamily: "BreeSerif",
-    fontSize: 16,
-  },
-  postsList: {
-    paddingBottom: 20,
-    marginTop: 15,
-  },
-  postContainer: {
-    borderRadius: 20,
-    padding: 10,
-    marginVertical: 10,
-    marginHorizontal: 20,
-    width: "85%",
-    marginLeft: "8%",
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  postHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  postProfilePicture: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    marginRight: 10,
-  },
-  postUserInfo: {
-    flex: 1,
-    fontFamily: "BreeSerif",
-  },
-  postName: {
-    fontWeight: "bold",
-    fontSize: 16,
-    fontFamily: "BreeSerif",
-  },
-  postUsername: {
-    color: "#4F4F4F",
-    fontFamily: "BreeSerif",
-  },
-  postContent: {
-    marginTop: 10,
-    fontSize: 16,
-    textAlign: "center",
-    width: "100%",
-    fontFamily: 'BreeSerif',
-    
-  },
-  postActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    width: "100%",
-  },
-  icones: {
-    marginHorizontal: 20,
-  },
-  likeCount: {
-    marginLeft: 8,
-    color: "black",
-    fontFamily: "BreeSerif",
-  },
-  postTimestamp: {
-    fontSize: 12,
-    color: "#4F4F4F",
-    marginTop: 10,
-    marginBottom: 15,
-    fontFamily: "BreeSerif",
-    alignItems: "center",
-    textAlign: "center",
-  },
-  deleteButton: {
-    marginLeft: "auto",
-    textAlign: "right",
-    alignItems: "right",
-  },
-  comment: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 5,
-    fontFamily: "BreeSerif",
-    fontSize: 15,
-  },
-  commentUser: {
-    marginRight: 5,
-    fontFamily: "BreeSerif",
-    fontSize: 15,
-  },
-  commentProfilePicture: {
-    width: 27,
-    height: 27,
-    borderRadius: 12,
-    marginRight: 5,
-  },
-  commentIcon: {
-    marginLeft: "auto",
-    textAlign: "right",
-    alignItems: "right",
-
-  },
-  noCommentsContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  noCommentsText: {
-    textAlign: "center",
-    fontSize: 18,
-    color: "black",
-    fontFamily: "BreeSerif",
-  },
-  deleteIcon: {
-    marginLeft: 165,
-  },
-});
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "white",
+    },
+    profileContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: "white",
+      height: "33%",
+    },
+    profilePicture: {
+      width: 130,
+      height: 130,
+      borderRadius: 100,
+      marginRight: 35,
+      marginLeft: 30,
+      marginTop: 20,
+    },
+    infoContainer: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 10 + globalFontSize,
+      color: "#000",
+      marginBottom: 5,
+      marginTop: 10,
+      fontFamily: "BreeSerif",
+    },
+    username: {
+      fontSize: 6 + globalFontSize,
+      color: "#000",
+      marginBottom: 5,
+      fontFamily: "BreeSerif",
+    },
+    bio: {
+      fontSize: -1 + globalFontSize,
+      color: "#000",
+      fontFamily: "BreeSerif",
+      marginBottom: 15,
+    },
+    editButton: {
+      position: "absolute",
+      bottom: 20,
+      right: 33,
+      backgroundColor: "#3a9ee4",
+      borderRadius: 18,
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 5,
+    },
+    editButtonText: {
+      color: "#000",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-around",
+      padding: 10,
+      backgroundColor: "#ADD8F6",
+      borderTopWidth: 1,
+    },
+    navButton: {
+      flexBasis: "25%",
+      minWidth: 80,
+      marginVertical: 0,
+      paddingVertical: 4,
+      alignItems: "center",
+      backgroundColor: "#ADD8F6",
+    },
+    navButtonText: {
+      color: "black",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+      fontSize: 11 + (globalFontSize / 3),
+    },
+    navButton1: {
+      flexBasis: "25%",
+      minWidth: 80,
+      marginVertical: 0,
+      paddingVertical: 4,
+      alignItems: "center",
+      backgroundColor: "#ADD8F6",
+      borderBottomWidth: 1,
+    },
+    navButtonText1: {
+      color: "black",
+      fontWeight: "bold",
+      fontFamily: "BreeSerif",
+      fontSize: 11 + (globalFontSize / 3),
+    },
+    postsList: {
+      paddingBottom: 20,
+      marginTop: 15,
+    },
+    postContainer: {
+      borderRadius: 20,
+      padding: 10,
+      marginVertical: 10,
+      marginHorizontal: 20,
+      width: "85%",
+      marginLeft: "8%",
+      borderWidth: 1,
+      borderColor: '#ccc',
+    },
+    postHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+    },
+    postProfilePicture: {
+      width: 45,
+      height: 45,
+      borderRadius: 22,
+      marginRight: 10,
+    },
+    postUserInfo: {
+      flex: 1,
+      fontFamily: "BreeSerif",
+    },
+    postName: {
+      fontWeight: "bold",
+      fontSize: 2 + globalFontSize,
+      fontFamily: "BreeSerif",
+    },
+    postUsername: {
+      color: "#4F4F4F",
+      fontFamily: "BreeSerif",
+      fontSize: 0 + globalFontSize,
+    },
+    postContent: {
+      marginTop: 10,
+      fontSize: 2 + globalFontSize,
+      textAlign: "center",
+      width: "100%",
+      fontFamily: 'BreeSerif',
+    },
+    postActions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 10,
+      width: "100%",
+    },
+    icones: {
+      marginHorizontal: 20,
+    },
+    likeCount: {
+      marginLeft: 8,
+      color: "black",
+      fontFamily: "BreeSerif",
+    },
+    postTimestamp: {
+      fontSize: -2 + globalFontSize,
+      color: "#4F4F4F",
+      marginTop: 10,
+      marginBottom: 15,
+      fontFamily: "BreeSerif",
+      alignItems: "center",
+      textAlign: "center",
+    },
+    deleteButton: {
+      marginLeft: "auto",
+      textAlign: "right",
+      alignItems: "right",
+    },
+    comment: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 5,
+      fontFamily: "BreeSerif",
+      fontSize: 1 + globalFontSize,
+      marginBottom: 3,
+    },
+    commentContent: {
+      width: '60%',
+      flexWrap: 'wrap',
+      fontSize: 0 + globalFontSize,
+    },
+    commentUser: {
+      marginRight: 5,
+      fontFamily: "BreeSerif",
+      fontSize: 1 + globalFontSize,
+    },
+    commentProfilePicture: {
+      width: 27,
+      height: 27,
+      borderRadius: 12,
+      marginRight: 5,
+    },
+    commentIcon: {
+      marginLeft: "auto",
+      textAlign: "right",
+      alignItems: "right",
+    },
+    noCommentsContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    noCommentsText: {
+      textAlign: "center",
+      fontSize: 4 + globalFontSize,
+      color: "black",
+      fontFamily: "BreeSerif",
+    },
+    deleteIcon: {
+      marginLeft: 165,
+    },
+  });
 
 export default Respostas;

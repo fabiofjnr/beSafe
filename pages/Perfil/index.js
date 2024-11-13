@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, Dimensions, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { auth, db, storage } from '../../firebase';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +10,7 @@ import AlertaLogout from '../Alertas/AlertaLogout';
 import { IMAGGA_API_KEY, IMAGGA_API_SECRET } from '@env';
 import { useTheme } from '../../ThemeContext';
 
-const Perfil = ({ setIsLoggedIn }) => {
+const Perfil = ({ setIsLoggedIn, globalFontSize }) => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
@@ -24,8 +23,6 @@ const Perfil = ({ setIsLoggedIn }) => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [oldUsername, setOldUsername] = useState('');
-  const [imageLabels, setImageLabels] = useState([]);
-  const navigation = useNavigation();
   const user = auth.currentUser;
 
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -60,7 +57,7 @@ const Perfil = ({ setIsLoggedIn }) => {
             setBio(data.bio || '');
             setProfilePicture(data.profilePictureURL || null);
             setOldUsername(data.username || '');
-            
+
           }
         } catch (error) {
           console.error('Erro ao buscar dados do usuário:', error);
@@ -69,8 +66,6 @@ const Perfil = ({ setIsLoggedIn }) => {
       fetchUserData();
     }
   }, [user]);
-
-
 
   const handleImagePicker = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -97,13 +92,13 @@ const Perfil = ({ setIsLoggedIn }) => {
   const handleImaggaRequest = async (imageUri) => {
     try {
       console.log('Iniciando análise da imagem:', imageUri);
-  
+
       const base64Image = await getBase64Image(imageUri);
       const formData = new URLSearchParams();
       formData.append('image_base64', base64Image);
-  
+
       const authHeader = `Basic ${window.btoa(`${IMAGGA_API_KEY}:${IMAGGA_API_SECRET}`)}`;
-  
+
       const response = await fetch('https://api.imagga.com/v2/tags', {
         method: 'POST',
         headers: {
@@ -112,16 +107,16 @@ const Perfil = ({ setIsLoggedIn }) => {
         },
         body: formData.toString(),
       });
-  
+
       const result = await response.json();
       console.log('Resultado da API:', result);
-  
+
       if (result.status && result.status.type === "error") {
         console.error('Erro da API:', result.status.text);
         alert(result.status.text);
         return;
       }
-  
+
       if (result.result && result.result.tags) {
         const tags = result.result.tags.map(tagObj => tagObj.tag.en.toLowerCase());
         console.log('Tags retornadas pela API:', tags);
@@ -134,7 +129,7 @@ const Perfil = ({ setIsLoggedIn }) => {
       alert('Erro ao analisar a imagem. Tente novamente.');
     }
   };
-  
+
   const isImageInappropriate = (tags) => {
     const inappropriateTags = [
       "brassiere", "lingerie", "erotic", "undergarment", "nude", "topless", "sexual",];
@@ -266,16 +261,16 @@ const Perfil = ({ setIsLoggedIn }) => {
               style={styles.profilePicture}
             />
           </TouchableOpacity>
-          <Text onPress={handleImagePicker} style={[styles.changePictureText, { color: isDarkMode ? '#DCDCDC' : '#007bff' }]}>Alterar foto</Text>
+          <Text onPress={handleImagePicker} style={[styles.changePictureText, { color: isDarkMode ? '#DCDCDC' : '#007bff', fontSize: 2 + globalFontSize }]}>Alterar foto</Text>
         </View>
 
         <View style={[styles.formContainer, { backgroundColor: isDarkMode ? '#8bb0c9' : '#ADD8F6', }]}>
-          <Text style={styles.label}>Nome</Text>
+          <Text style={[styles.label, { fontSize: 2 + globalFontSize }]}>Nome</Text>
           <View style={styles.inputContainer}>
-            <Ionicons name="person-circle-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="person-circle-outline" size={10 + globalFontSize} color="black" style={styles.icon} />
             <TextInput
               placeholder="Seu nome aqui!"
-              style={[styles.input, { color: isDarkMode ? 'white' : 'black', backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9' }]}
+              style={[styles.input, { color: isDarkMode ? 'white' : 'black', backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9', fontSize: 2 + globalFontSize }]}
               value={name}
               onChangeText={setName}
               maxLength={100}
@@ -284,12 +279,12 @@ const Perfil = ({ setIsLoggedIn }) => {
             />
           </View>
 
-          <Text style={styles.label}>Nome de usuário </Text>
+          <Text style={[styles.label, { fontSize: 2 + globalFontSize }]}>Nome de usuário </Text>
           <View style={styles.inputContainer}>
-            <Ionicons name="at-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="at-outline" size={10 + globalFontSize} color="black" style={styles.icon} />
             <TextInput
               placeholder="Seu nome de usuário aqui! (@)"
-              style={[styles.input, { color: isDarkMode ? '#DCDCDC' : 'black', backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9' }]}
+              style={[styles.input, { color: isDarkMode ? '#DCDCDC' : 'black', backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9', fontSize: 2 + (globalFontSize / 1) }]}
               value={username}
               onChangeText={setUsername}
               maxLength={24}
@@ -297,18 +292,32 @@ const Perfil = ({ setIsLoggedIn }) => {
             />
           </View>
 
-          <Text style={styles.label}>Biografia</Text>
+          <Text style={[styles.label, { fontSize: 2 + globalFontSize }]}>Biografia</Text>
           <View style={styles.inputContainer}>
-            <Ionicons name="receipt-outline" size={24} color="black" style={styles.icon} />
+            <Ionicons name="receipt-outline" size={10 + globalFontSize} color="black" style={styles.icon} />
             <TextInput
               placeholder="Aqui você escreve sua biografia, conte-nos um pouco sobre você!"
-              style={[styles.input, styles.bioInput, { color: isDarkMode ? '#DCDCDC' : 'black', backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9' }]}
+              style={[
+                styles.input,
+                styles.bioInput,
+                {
+                  color: isDarkMode ? '#DCDCDC' : 'black',
+                  backgroundColor: isDarkMode ? '#1A1F36' : '#f9f9f9',
+                  fontSize: 2 + globalFontSize,
+                },
+              ]}
               value={bio}
               onChangeText={setBio}
-              multiline={true}
-              numberOfLines={3}
               maxLength={87}
               placeholderTextColor={isDarkMode ? 'white' : 'black'}
+              multiline={true} 
+              returnKeyType="done" 
+              blurOnSubmit={true} 
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Enter') {
+                  Keyboard.dismiss(); 
+                }
+              }}
             />
           </View>
 
@@ -317,27 +326,35 @@ const Perfil = ({ setIsLoggedIn }) => {
             onPress={handleSave}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>{loading ? 'SALVANDO...' : 'SALVAR'}</Text>
+            <Text style={[styles.buttonText, { fontSize: 1 + globalFontSize }]}>{loading ? 'SALVANDO...' : 'SALVAR'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, styles.logoutButton]}
             onPress={handleLogout}
           >
-            <Text style={styles.buttonText}>SAIR DA CONTA</Text>
+            <Text style={[styles.buttonText, { fontSize: 1 + globalFontSize }]}>SAIR DA CONTA</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <AlertaLogin
         visible={alertVisible}
-        title={alertTitle}
+        title={
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+            <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+          </Text>
+        }
         message={alertMessage}
         onClose={handleAlertClose}
       />
       <AlertaLogout
         visible={logoutAlertVisible}
-        title="Confirmar Logout"
+        title={
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+            <Ionicons name="log-out-outline" size={20} color="red" /> • Confirmar Logout
+          </Text>
+        }
         message="Você tem certeza que deseja sair da conta?"
         onClose={handleLogoutClose}
         onConfirm={confirmLogout}
@@ -396,12 +413,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9f9f9',
     fontFamily: 'BreeSerif',
+    width: '90%',
+
   },
   bioInput: {
     height: 150,
     textAlignVertical: 'top',
-    paddingTop: 10,
+    paddingTop: 15,
     fontFamily: 'BreeSerif',
+    width: '90%',
   },
   icon: {
     marginRight: 10,
@@ -422,6 +442,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontFamily: 'BreeSerif',
+    textAlign: 'center,'
   },
 });
 

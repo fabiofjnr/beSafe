@@ -3,11 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'reac
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import AlertaLogin from '../Alertas/AlertaLogin';
 import { useTheme } from '../../ThemeContext';
 
-const NovoPost = () => {
+const NovoPost = ({ globalFontSize }) => {
   const { isDarkMode } = useTheme();
   const [content, setContent] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
@@ -16,6 +16,8 @@ const NovoPost = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const navigation = useNavigation();
   const user = auth.currentUser;
+
+  const styles = createStyles(globalFontSize);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -112,7 +114,11 @@ const NovoPost = () => {
       </View>
       <AlertaLogin
         visible={showAlert}
-        title={alertTitle}
+        title={
+          <Text style={{ alignItems: "center", textAlign: "center", fontSize: globalFontSize + 4 }}>
+          <Ionicons name="checkmark-circle" size={20} color="#27ae60" /> • Sucesso
+        </Text>
+        }
         message={alertMessage}
         onClose={handleCloseAlert}
       />
@@ -120,59 +126,61 @@ const NovoPost = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: 'white'
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  closeButton: {
-    padding: 10
-  },
-  publishButton: {
-    backgroundColor: '#3a9ee4',
-    padding: 15,
-    borderRadius: 15,
-    width: '35%',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  publishButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontFamily: 'BreeSerif',
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-    fontFamily: 'BreeSerif',
-  },
-  profilePicture: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-    marginLeft: 15,
-  },
-  input: {
-    flex: 1,
-    height: 650,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    textAlignVertical: 'top',
-    backgroundColor: 'white',
-    marginTop: 10,
-    fontFamily: 'BreeSerif',
-    fontSize: 25,
-  }
-});
+const createStyles = (globalFontSize) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: 'white'
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20
+    },
+    closeButton: {
+      padding: 10
+    },
+    publishButton: {
+      backgroundColor: '#3a9ee4',
+      paddingVertical: 15,
+      paddingHorizontal: 10 + globalFontSize / 2,
+      borderRadius: 15,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#ccc',
+      flexShrink: 1,
+    },
+    publishButtonText: {
+      color: 'white',
+      fontSize: 4 + globalFontSize,
+      fontFamily: 'BreeSerif',
+    },
+    contentContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 20,
+      fontFamily: 'BreeSerif',
+    },
+    profilePicture: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      marginRight: 10,
+      marginLeft: 15,
+    },
+    input: {
+      flex: 1,
+      height: 650,
+      borderRadius: 10,
+      paddingHorizontal: 15,
+      textAlignVertical: 'top',
+      backgroundColor: 'white',
+      marginTop: 10,
+      fontFamily: 'BreeSerif',
+      fontSize: 11 + globalFontSize,
+    }
+  });
 
 export default NovoPost;
